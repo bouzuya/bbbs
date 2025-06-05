@@ -14,7 +14,28 @@ pub fn router<S: Clone + Name + Send + Sync + 'static>() -> axum::Router<S> {
 
 #[cfg(test)]
 mod tests {
+    use axum::response::Response;
+
     use super::*;
+
+    async fn send_request(
+        router: axum::Router<()>,
+        request: axum::http::Request<axum::body::Body>,
+    ) -> anyhow::Result<Response> {
+        let response = tower::ServiceExt::oneshot(router, request).await?;
+        Ok(response)
+    }
+
+    trait ResponseExt {
+        async fn into_body_string(self) -> anyhow::Result<String>;
+    }
+
+    impl ResponseExt for axum::response::Response<axum::body::Body> {
+        async fn into_body_string(self) -> anyhow::Result<String> {
+            let bytes = axum::body::to_bytes(self.into_body(), usize::MAX).await?;
+            Ok(String::from_utf8(bytes.to_vec())?)
+        }
+    }
 
     #[tokio::test]
     async fn test_root() -> anyhow::Result<()> {
@@ -27,22 +48,14 @@ mod tests {
         }
         let router = router().with_state(AppState);
 
-        let response = tower::ServiceExt::oneshot(
-            router,
-            axum::http::Request::builder()
-                .method(axum::http::Method::GET)
-                .uri("/")
-                .body(axum::body::Body::empty())?,
-        )
-        .await?;
+        let request = axum::http::Request::builder()
+            .method(axum::http::Method::GET)
+            .uri("/")
+            .body(axum::body::Body::empty())?;
+        let response = send_request(router, request).await?;
 
         assert_eq!(response.status(), axum::http::StatusCode::OK);
-        let body = String::from_utf8(
-            axum::body::to_bytes(response.into_body(), usize::MAX)
-                .await?
-                .to_vec(),
-        )?;
-        assert_eq!(body, "Hello, bouzuya!");
+        assert_eq!(response.into_body_string().await?, "Hello, bouzuya!");
         Ok(())
     }
 }
