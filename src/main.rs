@@ -8,8 +8,8 @@ struct AppState {
 }
 
 impl crate::handler::message::MessageReader for AppState {
-    fn get_message(&self, id: &str) -> Option<crate::read_model::Message> {
-        self.messages.iter().find(|it| it.id == id).cloned()
+    fn get_message(&self, id: &crate::read_model::MessageId) -> Option<crate::read_model::Message> {
+        self.messages.iter().find(|it| &it.id == id).cloned()
     }
 
     fn list_messages(&self) -> Vec<crate::read_model::Message> {
@@ -35,19 +35,20 @@ async fn main() {
     let port = cli.port.unwrap_or(3000);
 
     use crate::read_model::Message;
+    use crate::read_model::MessageId;
     let router = handler::router().with_state(AppState {
         messages: vec![
             Message {
                 content: "foo".to_owned(),
-                id: "1".to_owned(),
+                id: MessageId("1".to_owned()),
             },
             Message {
                 content: "bar".to_owned(),
-                id: "2".to_owned(),
+                id: MessageId("2".to_owned()),
             },
             Message {
                 content: "baz".to_owned(),
-                id: "3".to_owned(),
+                id: MessageId("3".to_owned()),
             },
         ],
         name: "bouzuya".to_owned(),

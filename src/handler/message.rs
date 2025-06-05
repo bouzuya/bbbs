@@ -1,7 +1,7 @@
 use axum::extract::{Path, State};
 
 pub trait MessageReader {
-    fn get_message(&self, id: &str) -> Option<crate::read_model::Message>;
+    fn get_message(&self, id: &crate::read_model::MessageId) -> Option<crate::read_model::Message>;
     fn list_messages(&self) -> Vec<crate::read_model::Message>;
 }
 
@@ -9,6 +9,8 @@ async fn get<S: MessageReader>(
     State(state): State<S>,
     Path((id,)): Path<(String,)>,
 ) -> (axum::http::StatusCode, String) {
+    // TODO: validation
+    let id = crate::read_model::MessageId(id);
     state
         .get_message(&id)
         .map(|message| message.content)
@@ -46,8 +48,11 @@ mod tests {
     #[derive(Clone)]
     struct AppState(Vec<crate::read_model::Message>);
     impl MessageReader for AppState {
-        fn get_message(&self, id: &str) -> Option<crate::read_model::Message> {
-            self.0.iter().find(|it| it.id == id).cloned()
+        fn get_message(
+            &self,
+            id: &crate::read_model::MessageId,
+        ) -> Option<crate::read_model::Message> {
+            self.0.iter().find(|it| &it.id == id).cloned()
         }
 
         fn list_messages(&self) -> Vec<crate::read_model::Message> {
@@ -55,22 +60,22 @@ mod tests {
         }
     }
 
-    use crate::read_model::Message;
-
     #[tokio::test]
     async fn test_get() -> anyhow::Result<()> {
+        use crate::read_model::Message;
+        use crate::read_model::MessageId;
         let router = router().with_state(AppState(vec![
             Message {
                 content: "foo".to_owned(),
-                id: "1".to_owned(),
+                id: MessageId("1".to_owned()),
             },
             Message {
                 content: "bar".to_owned(),
-                id: "2".to_owned(),
+                id: MessageId("2".to_owned()),
             },
             Message {
                 content: "baz".to_owned(),
-                id: "3".to_owned(),
+                id: MessageId("3".to_owned()),
             },
         ]));
 
@@ -87,18 +92,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_not_found() -> anyhow::Result<()> {
+        use crate::read_model::Message;
+        use crate::read_model::MessageId;
         let router = router().with_state(AppState(vec![
             Message {
                 content: "foo".to_owned(),
-                id: "1".to_owned(),
+                id: MessageId("1".to_owned()),
             },
             Message {
                 content: "bar".to_owned(),
-                id: "2".to_owned(),
+                id: MessageId("2".to_owned()),
             },
             Message {
                 content: "baz".to_owned(),
-                id: "3".to_owned(),
+                id: MessageId("3".to_owned()),
             },
         ]));
 
@@ -115,18 +122,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_list() -> anyhow::Result<()> {
+        use crate::read_model::Message;
+        use crate::read_model::MessageId;
         let router = router().with_state(AppState(vec![
             Message {
                 content: "foo".to_owned(),
-                id: "1".to_owned(),
+                id: MessageId("1".to_owned()),
             },
             Message {
                 content: "bar".to_owned(),
-                id: "2".to_owned(),
+                id: MessageId("2".to_owned()),
             },
             Message {
                 content: "baz".to_owned(),
-                id: "3".to_owned(),
+                id: MessageId("3".to_owned()),
             },
         ]));
 
