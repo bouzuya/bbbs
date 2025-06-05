@@ -5,6 +5,7 @@ publish = false
 
 [dependencies]
 axum = "0.8.4"
+clap = { version = "4.5.39", features = ["derive", "env"] }
 hyper = "1.6.0"
 tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
 tower = "0.5.2"
