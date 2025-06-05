@@ -1,15 +1,7 @@
-use axum::extract::State;
+pub mod root;
 
-pub trait Name {
-    fn name(&self) -> &str;
-}
-
-async fn root<S: Name>(State(state): State<S>) -> String {
-    format!("Hello, {}!", state.name())
-}
-
-pub fn router<S: Clone + Name + Send + Sync + 'static>() -> axum::Router<S> {
-    axum::Router::new().route("/", axum::routing::get(root::<S>))
+pub fn router<S: Clone + self::root::Name + Send + Sync + 'static>() -> axum::Router<S> {
+    axum::Router::new().merge(self::root::router::<S>())
 }
 
 #[cfg(test)]
@@ -18,7 +10,7 @@ mod tests {
 
     use super::*;
 
-    async fn send_request(
+    pub(crate) async fn send_request(
         router: axum::Router<()>,
         request: axum::http::Request<axum::body::Body>,
     ) -> anyhow::Result<Response> {
@@ -26,7 +18,7 @@ mod tests {
         Ok(response)
     }
 
-    trait ResponseExt {
+    pub(crate) trait ResponseExt {
         async fn into_body_string(self) -> anyhow::Result<String>;
     }
 
@@ -38,10 +30,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_root() -> anyhow::Result<()> {
+    async fn test() -> anyhow::Result<()> {
         #[derive(Clone)]
         struct AppState;
-        impl Name for AppState {
+        impl self::root::Name for AppState {
             fn name(&self) -> &str {
                 "bouzuya"
             }
@@ -55,7 +47,6 @@ mod tests {
         let response = send_request(router, request).await?;
 
         assert_eq!(response.status(), axum::http::StatusCode::OK);
-        assert_eq!(response.into_body_string().await?, "Hello, bouzuya!");
         Ok(())
     }
 }

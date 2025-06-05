@@ -5,7 +5,7 @@ struct AppState {
     name: String,
 }
 
-impl handler::Name for AppState {
+impl handler::root::Name for AppState {
     fn name(&self) -> &str {
         &self.name
     }
