@@ -31,7 +31,7 @@ impl crate::handler::message::MessageRepository for AppState {
         let mut messages = self.messages.lock().unwrap();
         messages.push(crate::read_model::Message {
             content: message.content.clone(),
-            id: crate::read_model::MessageId(message.id.0.clone()),
+            id: crate::read_model::MessageId(message.id.to_string()),
         });
         Ok(())
     }

@@ -47,7 +47,7 @@ async fn create<S: MessageRepository>(
         Ok(_) => Ok((
             axum::http::StatusCode::CREATED,
             serde_urlencoded::to_string(CreateResponseBody {
-                id: message.id.0.to_owned(),
+                id: message.id.to_string(),
             })
             .expect("failed to serialize response"),
         )),
@@ -146,7 +146,7 @@ mod tests {
         let response = send_request(router, request).await?;
 
         assert_eq!(response.status(), axum::http::StatusCode::CREATED);
-        assert_eq!(response.into_body_string().await?, "id=123");
+        assert!(response.into_body_string().await?.starts_with("id="));
         Ok(())
     }
 
