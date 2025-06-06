@@ -1,7 +1,6 @@
 mod create;
 mod get;
-
-use axum::extract::State;
+mod list;
 
 pub trait MessageReader {
     fn get_message(&self, id: &crate::read_model::MessageId) -> Option<crate::read_model::Message>;
@@ -31,21 +30,12 @@ pub trait MessageRepository {
     ) -> Result<(), MessageRepositoryError>;
 }
 
-async fn list<S: MessageReader>(State(state): State<S>) -> String {
-    state
-        .list_messages()
-        .into_iter()
-        .map(|it| it.content)
-        .collect::<Vec<String>>()
-        .join(", ")
-}
-
 pub fn router<S: Clone + self::MessageReader + self::MessageRepository + Send + Sync + 'static>()
 -> axum::Router<S> {
     axum::Router::new()
         .route(
             "/messages",
-            axum::routing::get(list::<S>).post(self::create::handle::<S>),
+            axum::routing::get(self::list::handle::<S>).post(self::create::handle::<S>),
         )
         .route("/messages/{id}", axum::routing::get(self::get::handle::<S>))
 }
