@@ -3,7 +3,6 @@ pub mod root;
 
 pub fn router<
     S: Clone
-        + self::root::Name
         + self::messages::MessageReader
         + self::messages::MessageRepository
         + Send

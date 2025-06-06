@@ -1,14 +1,31 @@
 use axum::extract::State;
 
-pub trait Name {
-    fn name(&self) -> &str;
+#[derive(askama::Template)]
+#[template(path = "root.html")]
+struct RootResponse;
+
+impl axum::response::IntoResponse for RootResponse {
+    fn into_response(self) -> axum::response::Response {
+        askama::Template::render(&self)
+            .map(|it| {
+                axum::response::Response::builder()
+                    .status(axum::http::StatusCode::OK)
+                    .header(axum::http::header::CONTENT_TYPE, "text/html")
+                    .body(axum::body::Body::new(it))
+                    .expect("failed to build response")
+            })
+            .unwrap_or_else(|_e| {
+                // TODO: tracing::error!(e);
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            })
+    }
 }
 
-async fn handler<S: Name>(State(state): State<S>) -> String {
-    format!("Hello, {}!", state.name())
+async fn handler<S>(State(_): State<S>) -> RootResponse {
+    RootResponse
 }
 
-pub fn router<S: Clone + self::Name + Send + Sync + 'static>() -> axum::Router<S> {
+pub fn router<S: Clone + Send + Sync + 'static>() -> axum::Router<S> {
     axum::Router::new().route("/", axum::routing::get(handler::<S>))
 }
 
@@ -23,11 +40,6 @@ mod tests {
     async fn test() -> anyhow::Result<()> {
         #[derive(Clone)]
         struct AppState;
-        impl Name for AppState {
-            fn name(&self) -> &str {
-                "bouzuya"
-            }
-        }
         let router = router().with_state(AppState);
 
         let request = axum::http::Request::builder()
@@ -37,7 +49,7 @@ mod tests {
         let response = send_request(router, request).await?;
 
         assert_eq!(response.status(), axum::http::StatusCode::OK);
-        assert_eq!(response.into_body_string().await?, "Hello, bouzuya!");
+        assert!(response.into_body_string().await?.contains(&"bbbs"));
         Ok(())
     }
 }

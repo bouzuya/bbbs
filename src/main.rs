@@ -7,7 +7,6 @@ mod write_model;
 #[derive(Clone)]
 struct AppState {
     messages: Arc<Mutex<Vec<crate::read_model::Message>>>,
-    name: String,
 }
 
 impl crate::handler::messages::MessageReader for AppState {
@@ -34,12 +33,6 @@ impl crate::handler::messages::MessageRepository for AppState {
             id: crate::read_model::MessageId(message.id.to_string()),
         });
         Ok(())
-    }
-}
-
-impl crate::handler::root::Name for AppState {
-    fn name(&self) -> &str {
-        &self.name
     }
 }
 
@@ -71,7 +64,6 @@ async fn main() {
                 id: MessageId("3".to_owned()),
             },
         ])),
-        name: "bouzuya".to_owned(),
     });
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))
         .await
