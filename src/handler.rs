@@ -1,17 +1,17 @@
-pub mod message;
+pub mod messages;
 pub mod root;
 
 pub fn router<
     S: Clone
         + self::root::Name
-        + self::message::MessageReader
-        + self::message::MessageRepository
+        + self::messages::MessageReader
+        + self::messages::MessageRepository
         + Send
         + Sync
         + 'static,
 >() -> axum::Router<S> {
     axum::Router::new()
-        .merge(self::message::router::<S>())
+        .merge(self::messages::router::<S>())
         .merge(self::root::router::<S>())
 }
 

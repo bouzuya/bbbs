@@ -10,7 +10,7 @@ struct AppState {
     name: String,
 }
 
-impl crate::handler::message::MessageReader for AppState {
+impl crate::handler::messages::MessageReader for AppState {
     fn get_message(&self, id: &crate::read_model::MessageId) -> Option<crate::read_model::Message> {
         let messages = self.messages.lock().unwrap();
         messages.iter().find(|it| &it.id == id).cloned()
@@ -22,12 +22,12 @@ impl crate::handler::message::MessageReader for AppState {
     }
 }
 
-impl crate::handler::message::MessageRepository for AppState {
+impl crate::handler::messages::MessageRepository for AppState {
     fn store(
         &self,
         _version: Option<crate::write_model::Version>,
         message: &crate::write_model::Message,
-    ) -> Result<(), handler::message::MessageRepositoryError> {
+    ) -> Result<(), handler::messages::MessageRepositoryError> {
         let mut messages = self.messages.lock().unwrap();
         messages.push(crate::read_model::Message {
             content: message.content.clone(),
