@@ -1,4 +1,4 @@
-use axum::extract::{Path, State};
+use axum::extract::{Form, Path, State};
 
 pub trait MessageReader {
     fn get_message(&self, id: &crate::read_model::MessageId) -> Option<crate::read_model::Message>;
@@ -38,28 +38,53 @@ struct CreateResponseBody {
     id: String,
 }
 
+impl axum::response::IntoResponse for CreateResponseBody {
+    fn into_response(self) -> axum::response::Response {
+        let body = serde_urlencoded::to_string(self).expect("failed to serialize response");
+        axum::response::Response::builder()
+            .status(axum::http::StatusCode::CREATED)
+            .header(
+                axum::http::header::CONTENT_TYPE,
+                "application/x-www-form-urlencoded",
+            )
+            .body(axum::body::Body::from(body))
+            .expect("failed to build response")
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+enum CreateError {
+    #[error("repository error")]
+    Repository(#[from] MessageRepositoryError),
+}
+
+impl axum::response::IntoResponse for CreateError {
+    fn into_response(self) -> axum::response::Response {
+        match self {
+            CreateError::Repository(e) => match e {
+                MessageRepositoryError::InternalError(_) => {
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
+                }
+                MessageRepositoryError::NotFound(_) => {
+                    axum::http::StatusCode::NOT_FOUND.into_response()
+                }
+                MessageRepositoryError::VersionMismatch { .. } => {
+                    axum::http::StatusCode::CONFLICT.into_response()
+                }
+            },
+        }
+    }
+}
+
 async fn create<S: MessageRepository>(
     State(state): State<S>,
-    axum::extract::Form(CreateRequestBody { content }): axum::extract::Form<CreateRequestBody>,
-) -> Result<(axum::http::StatusCode, String), axum::http::StatusCode> {
+    Form(CreateRequestBody { content }): Form<CreateRequestBody>,
+) -> Result<CreateResponseBody, CreateError> {
     let message = crate::write_model::Message::create(content);
-    match MessageRepository::store(&state, None, &message) {
-        Ok(_) => Ok((
-            axum::http::StatusCode::CREATED,
-            serde_urlencoded::to_string(CreateResponseBody {
-                id: message.id.to_string(),
-            })
-            .expect("failed to serialize response"),
-        )),
-        Err(e) => match e {
-            MessageRepositoryError::InternalError(_e) => {
-                // TODO: tracing::error!(e);
-                Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
-            }
-            MessageRepositoryError::NotFound(_message_id) => Err(axum::http::StatusCode::NOT_FOUND),
-            MessageRepositoryError::VersionMismatch { .. } => Err(axum::http::StatusCode::CONFLICT),
-        },
-    }
+    MessageRepository::store(&state, None, &message)?;
+    Ok(CreateResponseBody {
+        id: message.id.to_string(),
+    })
 }
 
 async fn get<S: MessageReader>(
