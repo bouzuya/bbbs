@@ -1,6 +1,7 @@
 mod create;
+mod get;
 
-use axum::extract::{Path, State};
+use axum::extract::State;
 
 pub trait MessageReader {
     fn get_message(&self, id: &crate::read_model::MessageId) -> Option<crate::read_model::Message>;
@@ -30,24 +31,6 @@ pub trait MessageRepository {
     ) -> Result<(), MessageRepositoryError>;
 }
 
-async fn get<S: MessageReader>(
-    State(state): State<S>,
-    Path((id,)): Path<(String,)>,
-) -> (axum::http::StatusCode, String) {
-    // TODO: validation
-    let id = crate::read_model::MessageId(id);
-    state
-        .get_message(&id)
-        .map(|message| message.content)
-        .map(|content| (axum::http::StatusCode::OK, content.to_owned()))
-        .unwrap_or_else(|| {
-            (
-                axum::http::StatusCode::NOT_FOUND,
-                "Message not found".to_owned(),
-            )
-        })
-}
-
 async fn list<S: MessageReader>(State(state): State<S>) -> String {
     state
         .list_messages()
@@ -64,7 +47,7 @@ pub fn router<S: Clone + self::MessageReader + self::MessageRepository + Send + 
             "/messages",
             axum::routing::get(list::<S>).post(self::create::handle::<S>),
         )
-        .route("/messages/{id}", axum::routing::get(get::<S>))
+        .route("/messages/{id}", axum::routing::get(self::get::handle::<S>))
 }
 
 #[cfg(test)]
