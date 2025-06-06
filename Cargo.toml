@@ -7,6 +7,9 @@ publish = false
 axum = "0.8.4"
 clap = { version = "4.5.39", features = ["derive", "env"] }
 hyper = "1.6.0"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_urlencoded = "0.7.1"
+thiserror = "2.0.12"
 tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
 tower = "0.5.2"
 

@@ -5,6 +5,63 @@ pub trait MessageReader {
     fn list_messages(&self) -> Vec<crate::read_model::Message>;
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum MessageRepositoryError {
+    #[error("internal error: {0}")]
+    InternalError(Box<dyn std::error::Error + Send + Sync>),
+
+    #[error("not found {0:?}")]
+    NotFound(crate::write_model::MessageId),
+
+    #[error("version mismatch (expected: {expected:?}, actual: {actual:?})")]
+    VersionMismatch {
+        actual: crate::write_model::Version,
+        expected: crate::write_model::Version,
+    },
+}
+
+pub trait MessageRepository {
+    fn store(
+        &self,
+        version: Option<crate::write_model::Version>,
+        message: &crate::write_model::Message,
+    ) -> Result<(), MessageRepositoryError>;
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+struct CreateRequestBody {
+    content: String,
+}
+
+#[derive(serde::Serialize)]
+struct CreateResponseBody {
+    id: String,
+}
+
+async fn create<S: MessageRepository>(
+    State(state): State<S>,
+    axum::extract::Form(CreateRequestBody { content }): axum::extract::Form<CreateRequestBody>,
+) -> Result<(axum::http::StatusCode, String), axum::http::StatusCode> {
+    let message = crate::write_model::Message::create(content);
+    match MessageRepository::store(&state, None, &message) {
+        Ok(_) => Ok((
+            axum::http::StatusCode::CREATED,
+            serde_urlencoded::to_string(CreateResponseBody {
+                id: message.id.0.to_owned(),
+            })
+            .expect("failed to serialize response"),
+        )),
+        Err(e) => match e {
+            MessageRepositoryError::InternalError(_e) => {
+                // TODO: tracing::error!(e);
+                Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+            }
+            MessageRepositoryError::NotFound(_message_id) => Err(axum::http::StatusCode::NOT_FOUND),
+            MessageRepositoryError::VersionMismatch { .. } => Err(axum::http::StatusCode::CONFLICT),
+        },
+    }
+}
+
 async fn get<S: MessageReader>(
     State(state): State<S>,
     Path((id,)): Path<(String,)>,
@@ -32,9 +89,10 @@ async fn list<S: MessageReader>(State(state): State<S>) -> String {
         .join(", ")
 }
 
-pub fn router<S: Clone + self::MessageReader + Send + Sync + 'static>() -> axum::Router<S> {
+pub fn router<S: Clone + self::MessageReader + self::MessageRepository + Send + Sync + 'static>()
+-> axum::Router<S> {
     axum::Router::new()
-        .route("/messages", axum::routing::get(list::<S>))
+        .route("/messages", axum::routing::get(list::<S>).post(create::<S>))
         .route("/messages/{id}", axum::routing::get(get::<S>))
 }
 
@@ -59,25 +117,42 @@ mod tests {
             self.0.clone()
         }
     }
+    impl MessageRepository for AppState {
+        fn store(
+            &self,
+            _version: Option<crate::write_model::Version>,
+            _message: &crate::write_model::Message,
+        ) -> Result<(), MessageRepositoryError> {
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_create() -> anyhow::Result<()> {
+        let router = router().with_state(build_app_state());
+
+        let request = axum::http::Request::builder()
+            .header(
+                axum::http::header::CONTENT_TYPE,
+                "application/x-www-form-urlencoded",
+            )
+            .method(axum::http::Method::POST)
+            .uri("/messages")
+            .body(axum::body::Body::new(serde_urlencoded::to_string(
+                CreateRequestBody {
+                    content: "hello".to_owned(),
+                },
+            )?))?;
+        let response = send_request(router, request).await?;
+
+        assert_eq!(response.status(), axum::http::StatusCode::CREATED);
+        assert_eq!(response.into_body_string().await?, "id=123");
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_get() -> anyhow::Result<()> {
-        use crate::read_model::Message;
-        use crate::read_model::MessageId;
-        let router = router().with_state(AppState(vec![
-            Message {
-                content: "foo".to_owned(),
-                id: MessageId("1".to_owned()),
-            },
-            Message {
-                content: "bar".to_owned(),
-                id: MessageId("2".to_owned()),
-            },
-            Message {
-                content: "baz".to_owned(),
-                id: MessageId("3".to_owned()),
-            },
-        ]));
+        let router = router().with_state(build_app_state());
 
         let request = axum::http::Request::builder()
             .method(axum::http::Method::GET)
@@ -92,22 +167,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_not_found() -> anyhow::Result<()> {
-        use crate::read_model::Message;
-        use crate::read_model::MessageId;
-        let router = router().with_state(AppState(vec![
-            Message {
-                content: "foo".to_owned(),
-                id: MessageId("1".to_owned()),
-            },
-            Message {
-                content: "bar".to_owned(),
-                id: MessageId("2".to_owned()),
-            },
-            Message {
-                content: "baz".to_owned(),
-                id: MessageId("3".to_owned()),
-            },
-        ]));
+        let router = router().with_state(build_app_state());
 
         let request = axum::http::Request::builder()
             .method(axum::http::Method::GET)
@@ -122,9 +182,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_list() -> anyhow::Result<()> {
+        let router = router().with_state(build_app_state());
+
+        let request = axum::http::Request::builder()
+            .method(axum::http::Method::GET)
+            .uri("/messages")
+            .body(axum::body::Body::empty())?;
+        let response = send_request(router, request).await?;
+
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        assert_eq!(response.into_body_string().await?, "foo, bar, baz");
+        Ok(())
+    }
+
+    fn build_app_state() -> AppState {
         use crate::read_model::Message;
         use crate::read_model::MessageId;
-        let router = router().with_state(AppState(vec![
+        AppState(vec![
             Message {
                 content: "foo".to_owned(),
                 id: MessageId("1".to_owned()),
@@ -137,16 +211,6 @@ mod tests {
                 content: "baz".to_owned(),
                 id: MessageId("3".to_owned()),
             },
-        ]));
-
-        let request = axum::http::Request::builder()
-            .method(axum::http::Method::GET)
-            .uri("/messages")
-            .body(axum::body::Body::empty())?;
-        let response = send_request(router, request).await?;
-
-        assert_eq!(response.status(), axum::http::StatusCode::OK);
-        assert_eq!(response.into_body_string().await?, "foo, bar, baz");
-        Ok(())
+        ])
     }
 }

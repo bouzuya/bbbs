@@ -1,19 +1,39 @@
+use std::sync::{Arc, Mutex};
+
 mod handler;
 mod read_model;
+mod write_model;
 
 #[derive(Clone)]
 struct AppState {
-    messages: Vec<crate::read_model::Message>,
+    messages: Arc<Mutex<Vec<crate::read_model::Message>>>,
     name: String,
 }
 
 impl crate::handler::message::MessageReader for AppState {
     fn get_message(&self, id: &crate::read_model::MessageId) -> Option<crate::read_model::Message> {
-        self.messages.iter().find(|it| &it.id == id).cloned()
+        let messages = self.messages.lock().unwrap();
+        messages.iter().find(|it| &it.id == id).cloned()
     }
 
     fn list_messages(&self) -> Vec<crate::read_model::Message> {
-        self.messages.clone()
+        let messages = self.messages.lock().unwrap();
+        messages.clone()
+    }
+}
+
+impl crate::handler::message::MessageRepository for AppState {
+    fn store(
+        &self,
+        _version: Option<crate::write_model::Version>,
+        message: &crate::write_model::Message,
+    ) -> Result<(), handler::message::MessageRepositoryError> {
+        let mut messages = self.messages.lock().unwrap();
+        messages.push(crate::read_model::Message {
+            content: message.content.clone(),
+            id: crate::read_model::MessageId(message.id.0.clone()),
+        });
+        Ok(())
     }
 }
 
@@ -37,7 +57,7 @@ async fn main() {
     use crate::read_model::Message;
     use crate::read_model::MessageId;
     let router = handler::router().with_state(AppState {
-        messages: vec![
+        messages: Arc::new(Mutex::new(vec![
             Message {
                 content: "foo".to_owned(),
                 id: MessageId("1".to_owned()),
@@ -50,7 +70,7 @@ async fn main() {
                 content: "baz".to_owned(),
                 id: MessageId("3".to_owned()),
             },
-        ],
+        ])),
         name: "bouzuya".to_owned(),
     });
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))
