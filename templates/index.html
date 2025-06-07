@@ -13,19 +13,16 @@
             <nav class="breadcrumbs">
                 <ol>
                     <li><a href="/">bbbs</a></li>
-                    <li><a href="/messages">messages</a></li>
-                    <li><a href="/messages/{{ message.id }}">{{ message.id }}</a></li>
                 </ol>
             </nav>
         </header>
 
         <main class="page-body">
-            <section class="message-list">
-                <h1>message</h1>
-                <div>
-                    <p>{{ message.id }}</p>
-                    <p>{{ message.content }}</p>
-                </div>
+            <section class="site-index">
+                <h1 class="page-title">bbbs</h1>
+                <ul>
+                    <li><a href="/messages">/messages</a></li>
+                </ul>
             </section>
         </main>
     </div>

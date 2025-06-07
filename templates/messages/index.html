@@ -7,17 +7,35 @@
 </head>
 
 <body>
-    <h1><a href="/">bbbs</a></h1>
-    <p><a href="/messages">/messages</a></p>
-    <ul>
-        {% for message in messages %}
-        <li><a href="/messages/{{ message.id }}">{{ message.content }}</a></li>
-        {% endfor %}
-    </ul>
-    <form action="/messages" method="post">
-        <input type="text" name="content" placeholder="メッセージを入力" required="required" />
-        <button type="submit">送信</button>
-    </form>
+    <div class="page-layout">
+        <header class="page-header">
+            <div class="site-title"><a href="/">bbbs</a></div>
+            <nav class="breadcrumbs">
+                <ol>
+                    <li><a href="/">bbbs</a></li>
+                    <li><a href="/messages">messages</a></li>
+                </ol>
+            </nav>
+        </header>
+
+        <main class="page-body">
+            <section class="message-list">
+                <h1>messages</h1>
+                <ul>
+                    {% for message in messages %}
+                    <li><a href="/messages/{{ message.id }}">{{ message.content }}</a></li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            <section class="new-message">
+                <form action="/messages" method="post">
+                    <input type="text" name="content" placeholder="メッセージを入力" required="required" />
+                    <button type="submit">送信</button>
+                </form>
+            </section>
+        </main>
+    </div>
 </body>
 
 </html>

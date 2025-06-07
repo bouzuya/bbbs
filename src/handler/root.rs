@@ -1,23 +1,16 @@
 use axum::extract::State;
 
+use crate::handler::AskamaTemplateExt;
+
 #[derive(askama::Template)]
-#[template(path = "root.html")]
+#[template(path = "index.html")]
 pub struct RootResponse;
+
+impl AskamaTemplateExt for RootResponse {}
 
 impl axum::response::IntoResponse for RootResponse {
     fn into_response(self) -> axum::response::Response {
-        askama::Template::render(&self)
-            .map(|it| {
-                axum::response::Response::builder()
-                    .status(axum::http::StatusCode::OK)
-                    .header(axum::http::header::CONTENT_TYPE, "text/html")
-                    .body(axum::body::Body::new(it))
-                    .expect("failed to build response")
-            })
-            .unwrap_or_else(|_e| {
-                // TODO: tracing::error!(e);
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
-            })
+        self.to_response()
     }
 }
 
