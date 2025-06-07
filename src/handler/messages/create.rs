@@ -14,14 +14,15 @@ pub struct MessageCreateResponseBody {
 
 impl axum::response::IntoResponse for MessageCreateResponseBody {
     fn into_response(self) -> axum::response::Response {
-        let body = serde_urlencoded::to_string(self).expect("failed to serialize response");
+        let location = format!("/messages/{}", self.id);
         axum::response::Response::builder()
-            .status(axum::http::StatusCode::CREATED)
+            .status(axum::http::StatusCode::SEE_OTHER)
             .header(
                 axum::http::header::CONTENT_TYPE,
                 "application/x-www-form-urlencoded",
             )
-            .body(axum::body::Body::from(body))
+            .header(axum::http::header::LOCATION, location)
+            .body(axum::body::Body::empty())
             .expect("failed to build response")
     }
 }
