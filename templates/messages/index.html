@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>bbbs</title>
+</head>
+
+<body>
+    <h1><a href="/">bbbs</a></h1>
+    <p><a href="/messages">/messages</a></p>
+    <ul>
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+    </ul>
+    <form action="/messages" method="post">
+        <input type="text" name="content" placeholder="メッセージを入力" required="required" />
+        <button type="submit">送信</button>
+    </form>
+</body>
+
+</html>

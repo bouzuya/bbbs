@@ -14,6 +14,29 @@ pub fn router<
         .merge(self::root::router::<S>())
 }
 
+trait AskamaTemplateExt: askama::Template {
+    fn to_response(&self) -> axum::response::Response {
+        askama::Template::render(&self)
+            .map(|it| {
+                axum::response::Response::builder()
+                    .status(self.status_code())
+                    .header(axum::http::header::CONTENT_TYPE, "text/html")
+                    .body(axum::body::Body::new(it))
+                    .expect("failed to build response")
+            })
+            .unwrap_or_else(|_e| {
+                // TODO: tracing::error!(e);
+                axum::response::IntoResponse::into_response(
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                )
+            })
+    }
+
+    fn status_code(&self) -> axum::http::StatusCode {
+        axum::http::StatusCode::OK
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use axum::response::Response;

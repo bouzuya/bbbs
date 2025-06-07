@@ -2,7 +2,7 @@ use axum::extract::State;
 
 #[derive(askama::Template)]
 #[template(path = "root.html")]
-struct RootResponse;
+pub struct RootResponse;
 
 impl axum::response::IntoResponse for RootResponse {
     fn into_response(self) -> axum::response::Response {
