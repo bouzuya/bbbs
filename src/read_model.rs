@@ -1,7 +1,7 @@
 #[derive(Clone)]
 pub struct Message {
     pub content: String,
-    pub id: MessageId,
+    pub id: String,
 }
 
 #[derive(Clone, Eq, PartialEq)]

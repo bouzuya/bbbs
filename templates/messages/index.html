@@ -11,7 +11,7 @@
     <p><a href="/messages">/messages</a></p>
     <ul>
         {% for message in messages %}
-        <li>{{ message }}</li>
+        <li><a href="/messages/{{ message.id }}">{{ message.content }}</a></li>
         {% endfor %}
     </ul>
     <form action="/messages" method="post">

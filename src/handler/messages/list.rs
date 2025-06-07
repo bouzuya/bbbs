@@ -6,7 +6,7 @@ use crate::handler::messages::MessageReader;
 #[derive(askama::Template)]
 #[template(path = "messages/index.html")]
 pub struct MessageListResponse {
-    pub messages: Vec<String>,
+    pub messages: Vec<crate::read_model::Message>,
 }
 
 impl AskamaTemplateExt for MessageListResponse {}
@@ -19,10 +19,6 @@ impl axum::response::IntoResponse for MessageListResponse {
 
 pub async fn handle<S: MessageReader>(State(state): State<S>) -> MessageListResponse {
     MessageListResponse {
-        messages: state
-            .list_messages()
-            .into_iter()
-            .map(|it| it.content)
-            .collect::<Vec<String>>(),
+        messages: state.list_messages(),
     }
 }

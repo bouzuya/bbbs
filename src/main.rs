@@ -12,7 +12,7 @@ struct AppState {
 impl crate::handler::messages::MessageReader for AppState {
     fn get_message(&self, id: &crate::read_model::MessageId) -> Option<crate::read_model::Message> {
         let messages = self.messages.lock().unwrap();
-        messages.iter().find(|it| &it.id == id).cloned()
+        messages.iter().find(|it| &it.id == &id.0).cloned()
     }
 
     fn list_messages(&self) -> Vec<crate::read_model::Message> {
@@ -30,7 +30,7 @@ impl crate::handler::messages::MessageRepository for AppState {
         let mut messages = self.messages.lock().unwrap();
         messages.push(crate::read_model::Message {
             content: message.content.clone(),
-            id: crate::read_model::MessageId(message.id.to_string()),
+            id: message.id.to_string(),
         });
         Ok(())
     }
@@ -48,20 +48,19 @@ async fn main() {
     let port = cli.port.unwrap_or(3000);
 
     use crate::read_model::Message;
-    use crate::read_model::MessageId;
     let router = handler::router().with_state(AppState {
         messages: Arc::new(Mutex::new(vec![
             Message {
                 content: "foo".to_owned(),
-                id: MessageId("1".to_owned()),
+                id: "1".to_owned(),
             },
             Message {
                 content: "bar".to_owned(),
-                id: MessageId("2".to_owned()),
+                id: "2".to_owned(),
             },
             Message {
                 content: "baz".to_owned(),
-                id: MessageId("3".to_owned()),
+                id: "3".to_owned(),
             },
         ])),
     });

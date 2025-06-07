@@ -54,7 +54,7 @@ mod tests {
             &self,
             id: &crate::read_model::MessageId,
         ) -> Option<crate::read_model::Message> {
-            self.0.iter().find(|it| &it.id == id).cloned()
+            self.0.iter().find(|it| &it.id == &id.0).cloned()
         }
 
         fn list_messages(&self) -> Vec<crate::read_model::Message> {
@@ -141,19 +141,18 @@ mod tests {
 
     fn build_app_state() -> AppState {
         use crate::read_model::Message;
-        use crate::read_model::MessageId;
         AppState(vec![
             Message {
                 content: "foo".to_owned(),
-                id: MessageId("1".to_owned()),
+                id: "1".to_owned(),
             },
             Message {
                 content: "bar".to_owned(),
-                id: MessageId("2".to_owned()),
+                id: "2".to_owned(),
             },
             Message {
                 content: "baz".to_owned(),
-                id: MessageId("3".to_owned()),
+                id: "3".to_owned(),
             },
         ])
     }
