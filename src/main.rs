@@ -1,7 +1,8 @@
-use std::sync::{Arc, Mutex};
-
 mod handler;
 mod model;
+mod utils;
+
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 struct AppState {
