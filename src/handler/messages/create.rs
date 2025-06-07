@@ -50,7 +50,7 @@ impl axum::response::IntoResponse for MessageCreateError {
     }
 }
 
-pub async fn handle<S: MessageRepository>(
+pub async fn handler<S: MessageRepository>(
     State(state): State<S>,
     Form(MessageCreateRequestBody { content }): Form<MessageCreateRequestBody>,
 ) -> Result<MessageCreateResponseBody, MessageCreateError> {

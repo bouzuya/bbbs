@@ -35,9 +35,12 @@ pub fn router<S: Clone + self::MessageReader + self::MessageRepository + Send + 
     axum::Router::new()
         .route(
             "/messages",
-            axum::routing::get(self::list::handle::<S>).post(self::create::handle::<S>),
+            axum::routing::get(self::list::handler::<S>).post(self::create::handler::<S>),
         )
-        .route("/messages/{id}", axum::routing::get(self::get::handle::<S>))
+        .route(
+            "/messages/{id}",
+            axum::routing::get(self::get::handler::<S>),
+        )
 }
 
 #[cfg(test)]

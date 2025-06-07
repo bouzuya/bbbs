@@ -31,7 +31,7 @@ impl axum::response::IntoResponse for MessageGetError {
     }
 }
 
-pub async fn handle<S: MessageReader>(
+pub async fn handler<S: MessageReader>(
     State(state): State<S>,
     Path((id,)): Path<(String,)>,
 ) -> Result<MessageGetResponse, MessageGetError> {

@@ -17,7 +17,7 @@ impl axum::response::IntoResponse for MessageListResponse {
     }
 }
 
-pub async fn handle<S: MessageReader>(State(state): State<S>) -> MessageListResponse {
+pub async fn handler<S: MessageReader>(State(state): State<S>) -> MessageListResponse {
     MessageListResponse {
         messages: state.list_messages(),
     }
