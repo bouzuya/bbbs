@@ -6,7 +6,7 @@ use crate::handler::messages::MessageReader;
 #[derive(askama::Template)]
 #[template(path = "messages/[id].html")]
 pub struct MessageGetResponse {
-    pub message: crate::read_model::Message,
+    pub message: crate::model::read::Message,
 }
 
 impl AskamaTemplateExt for MessageGetResponse {}
@@ -36,7 +36,7 @@ pub async fn handler<S: MessageReader>(
     Path((id,)): Path<(String,)>,
 ) -> Result<MessageGetResponse, MessageGetError> {
     // TODO: validation
-    let id = crate::read_model::MessageId(id);
+    let id = crate::model::read::MessageId(id);
     state
         .get_message(&id)
         .map(|message| MessageGetResponse { message })

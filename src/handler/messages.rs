@@ -3,8 +3,11 @@ mod get;
 mod list;
 
 pub trait MessageReader {
-    fn get_message(&self, id: &crate::read_model::MessageId) -> Option<crate::read_model::Message>;
-    fn list_messages(&self) -> Vec<crate::read_model::Message>;
+    fn get_message(
+        &self,
+        id: &crate::model::read::MessageId,
+    ) -> Option<crate::model::read::Message>;
+    fn list_messages(&self) -> Vec<crate::model::read::Message>;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -13,20 +16,20 @@ pub enum MessageRepositoryError {
     InternalError(Box<dyn std::error::Error + Send + Sync>),
 
     #[error("not found {0:?}")]
-    NotFound(crate::write_model::MessageId),
+    NotFound(crate::model::write::MessageId),
 
     #[error("version mismatch (expected: {expected:?}, actual: {actual:?})")]
     VersionMismatch {
-        actual: crate::write_model::Version,
-        expected: crate::write_model::Version,
+        actual: crate::model::write::Version,
+        expected: crate::model::write::Version,
     },
 }
 
 pub trait MessageRepository {
     fn store(
         &self,
-        version: Option<crate::write_model::Version>,
-        message: &crate::write_model::Message,
+        version: Option<crate::model::write::Version>,
+        message: &crate::model::write::Message,
     ) -> Result<(), MessageRepositoryError>;
 }
 
@@ -51,24 +54,24 @@ mod tests {
     use super::*;
 
     #[derive(Clone)]
-    struct AppState(Vec<crate::read_model::Message>);
+    struct AppState(Vec<crate::model::read::Message>);
     impl MessageReader for AppState {
         fn get_message(
             &self,
-            id: &crate::read_model::MessageId,
-        ) -> Option<crate::read_model::Message> {
+            id: &crate::model::read::MessageId,
+        ) -> Option<crate::model::read::Message> {
             self.0.iter().find(|it| &it.id == &id.0).cloned()
         }
 
-        fn list_messages(&self) -> Vec<crate::read_model::Message> {
+        fn list_messages(&self) -> Vec<crate::model::read::Message> {
             self.0.clone()
         }
     }
     impl MessageRepository for AppState {
         fn store(
             &self,
-            _version: Option<crate::write_model::Version>,
-            _message: &crate::write_model::Message,
+            _version: Option<crate::model::write::Version>,
+            _message: &crate::model::write::Message,
         ) -> Result<(), MessageRepositoryError> {
             Ok(())
         }
@@ -150,7 +153,7 @@ mod tests {
     }
 
     fn build_app_state() -> AppState {
-        use crate::read_model::Message;
+        use crate::model::read::Message;
         AppState(vec![
             Message {
                 content: "foo".to_owned(),

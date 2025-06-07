@@ -1,21 +1,23 @@
 use std::sync::{Arc, Mutex};
 
 mod handler;
-mod read_model;
-mod write_model;
+mod model;
 
 #[derive(Clone)]
 struct AppState {
-    messages: Arc<Mutex<Vec<crate::read_model::Message>>>,
+    messages: Arc<Mutex<Vec<crate::model::read::Message>>>,
 }
 
 impl crate::handler::messages::MessageReader for AppState {
-    fn get_message(&self, id: &crate::read_model::MessageId) -> Option<crate::read_model::Message> {
+    fn get_message(
+        &self,
+        id: &crate::model::read::MessageId,
+    ) -> Option<crate::model::read::Message> {
         let messages = self.messages.lock().unwrap();
         messages.iter().find(|it| &it.id == &id.0).cloned()
     }
 
-    fn list_messages(&self) -> Vec<crate::read_model::Message> {
+    fn list_messages(&self) -> Vec<crate::model::read::Message> {
         let messages = self.messages.lock().unwrap();
         messages.clone()
     }
@@ -24,11 +26,11 @@ impl crate::handler::messages::MessageReader for AppState {
 impl crate::handler::messages::MessageRepository for AppState {
     fn store(
         &self,
-        _version: Option<crate::write_model::Version>,
-        message: &crate::write_model::Message,
+        _version: Option<crate::model::write::Version>,
+        message: &crate::model::write::Message,
     ) -> Result<(), handler::messages::MessageRepositoryError> {
         let mut messages = self.messages.lock().unwrap();
-        messages.push(crate::read_model::Message {
+        messages.push(crate::model::read::Message {
             content: message.content.clone(),
             id: message.id.to_string(),
         });

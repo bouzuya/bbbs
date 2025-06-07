@@ -55,7 +55,7 @@ pub async fn handler<S: MessageRepository>(
     State(state): State<S>,
     Form(MessageCreateRequestBody { content }): Form<MessageCreateRequestBody>,
 ) -> Result<MessageCreateResponseBody, MessageCreateError> {
-    let message = crate::write_model::Message::create(content);
+    let message = crate::model::write::Message::create(content);
     MessageRepository::store(&state, None, &message)?;
     Ok(MessageCreateResponseBody {
         id: message.id.to_string(),
