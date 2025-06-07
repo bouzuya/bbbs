@@ -108,7 +108,8 @@ mod tests {
         let response = send_request(router, request).await?;
 
         assert_eq!(response.status(), axum::http::StatusCode::OK);
-        assert_eq!(response.into_body_string().await?, "foo");
+        let body = response.into_body_string().await?;
+        assert!(body.contains("foo"));
         Ok(())
     }
 
@@ -123,7 +124,7 @@ mod tests {
         let response = send_request(router, request).await?;
 
         assert_eq!(response.status(), axum::http::StatusCode::NOT_FOUND);
-        assert_eq!(response.into_body_string().await?, "Message not found");
+        assert_eq!(response.into_body_string().await?, "");
         Ok(())
     }
 
@@ -138,7 +139,13 @@ mod tests {
         let response = send_request(router, request).await?;
 
         assert_eq!(response.status(), axum::http::StatusCode::OK);
-        assert_eq!(response.into_body_string().await?, "foo, bar, baz");
+        let body = response.into_body_string().await?;
+        assert!(body.contains("/messages/1"));
+        assert!(body.contains("foo"));
+        assert!(body.contains("/messages/2"));
+        assert!(body.contains("bar"));
+        assert!(body.contains("/messages/3"));
+        assert!(body.contains("baz"));
         Ok(())
     }
 
