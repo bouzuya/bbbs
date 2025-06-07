@@ -11,10 +11,11 @@ struct AppState {
 impl crate::handler::messages::MessageReader for AppState {
     fn get_message(
         &self,
-        id: &crate::model::read::MessageId,
+        id: &crate::model::shared::id::MessageId,
     ) -> Option<crate::model::read::Message> {
         let messages = self.messages.lock().unwrap();
-        messages.iter().find(|it| &it.id == &id.0).cloned()
+        let s = id.to_string();
+        messages.iter().find(|it| &it.id == &s).cloned()
     }
 
     fn list_messages(&self) -> Vec<crate::model::read::Message> {

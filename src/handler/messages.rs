@@ -5,7 +5,7 @@ mod list;
 pub trait MessageReader {
     fn get_message(
         &self,
-        id: &crate::model::read::MessageId,
+        id: &crate::model::shared::id::MessageId,
     ) -> Option<crate::model::read::Message>;
     fn list_messages(&self) -> Vec<crate::model::read::Message>;
 }
@@ -16,7 +16,7 @@ pub enum MessageRepositoryError {
     InternalError(Box<dyn std::error::Error + Send + Sync>),
 
     #[error("not found {0:?}")]
-    NotFound(crate::model::write::MessageId),
+    NotFound(crate::model::shared::id::MessageId),
 
     #[error("version mismatch (expected: {expected:?}, actual: {actual:?})")]
     VersionMismatch {
@@ -58,9 +58,10 @@ mod tests {
     impl MessageReader for AppState {
         fn get_message(
             &self,
-            id: &crate::model::read::MessageId,
+            id: &crate::model::shared::id::MessageId,
         ) -> Option<crate::model::read::Message> {
-            self.0.iter().find(|it| &it.id == &id.0).cloned()
+            let s = id.to_string();
+            self.0.iter().find(|it| &it.id == &s).cloned()
         }
 
         fn list_messages(&self) -> Vec<crate::model::read::Message> {

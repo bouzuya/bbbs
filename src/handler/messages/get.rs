@@ -1,3 +1,5 @@
+use std::str::FromStr as _;
+
 use axum::extract::{Path, State};
 
 use crate::handler::AskamaTemplateExt;
@@ -19,6 +21,8 @@ impl axum::response::IntoResponse for MessageGetResponse {
 
 #[derive(Debug, thiserror::Error)]
 pub enum MessageGetError {
+    #[error("invalid message id")]
+    InvalidId(#[from] crate::model::shared::id::MessageIdError),
     #[error("not found")]
     NotFound,
 }
@@ -26,6 +30,7 @@ pub enum MessageGetError {
 impl axum::response::IntoResponse for MessageGetError {
     fn into_response(self) -> axum::response::Response {
         match self {
+            MessageGetError::InvalidId(_) => axum::http::StatusCode::BAD_REQUEST.into_response(),
             MessageGetError::NotFound => axum::http::StatusCode::NOT_FOUND.into_response(),
         }
     }
@@ -35,8 +40,8 @@ pub async fn handler<S: MessageReader>(
     State(state): State<S>,
     Path((id,)): Path<(String,)>,
 ) -> Result<MessageGetResponse, MessageGetError> {
-    // TODO: validation
-    let id = crate::model::read::MessageId(id);
+    let id =
+        crate::model::shared::id::MessageId::from_str(&id).map_err(MessageGetError::InvalidId)?;
     state
         .get_message(&id)
         .map(|message| MessageGetResponse { message })
