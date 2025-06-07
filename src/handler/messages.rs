@@ -96,8 +96,8 @@ mod tests {
             )?))?;
         let response = send_request(router, request).await?;
 
-        assert_eq!(response.status(), axum::http::StatusCode::CREATED);
-        assert!(response.into_body_string().await?.starts_with("id="));
+        assert_eq!(response.status(), axum::http::StatusCode::SEE_OTHER);
+        assert_eq!(response.into_body_string().await?, "");
         Ok(())
     }
 
@@ -107,7 +107,7 @@ mod tests {
 
         let request = axum::http::Request::builder()
             .method(axum::http::Method::GET)
-            .uri("/messages/1")
+            .uri("/messages/28cec994-e1c6-4987-b151-a4e66db42bda")
             .body(axum::body::Body::empty())?;
         let response = send_request(router, request).await?;
 
@@ -123,7 +123,7 @@ mod tests {
 
         let request = axum::http::Request::builder()
             .method(axum::http::Method::GET)
-            .uri("/messages/4")
+            .uri("/messages/1df49bbd-3f94-475b-a057-d9d4c827449f")
             .body(axum::body::Body::empty())?;
         let response = send_request(router, request).await?;
 
@@ -144,11 +144,11 @@ mod tests {
 
         assert_eq!(response.status(), axum::http::StatusCode::OK);
         let body = response.into_body_string().await?;
-        assert!(body.contains("/messages/1"));
+        assert!(body.contains("/messages/28cec994-e1c6-4987-b151-a4e66db42bda"));
         assert!(body.contains("foo"));
-        assert!(body.contains("/messages/2"));
+        assert!(body.contains("/messages/e77392c9-3883-456c-9add-288e4c2ca980"));
         assert!(body.contains("bar"));
-        assert!(body.contains("/messages/3"));
+        assert!(body.contains("/messages/7402f8d6-7f12-40f5-875d-b473ac7306c5"));
         assert!(body.contains("baz"));
         Ok(())
     }
@@ -158,15 +158,15 @@ mod tests {
         AppState(vec![
             Message {
                 content: "foo".to_owned(),
-                id: "1".to_owned(),
+                id: "28cec994-e1c6-4987-b151-a4e66db42bda".to_owned(),
             },
             Message {
                 content: "bar".to_owned(),
-                id: "2".to_owned(),
+                id: "e77392c9-3883-456c-9add-288e4c2ca980".to_owned(),
             },
             Message {
                 content: "baz".to_owned(),
-                id: "3".to_owned(),
+                id: "7402f8d6-7f12-40f5-875d-b473ac7306c5".to_owned(),
             },
         ])
     }
