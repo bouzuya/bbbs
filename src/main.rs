@@ -47,22 +47,8 @@ async fn main() {
     let cli = <Cli as clap::Parser>::parse();
     let port = cli.port.unwrap_or(3000);
 
-    use crate::read_model::Message;
     let router = handler::router().with_state(AppState {
-        messages: Arc::new(Mutex::new(vec![
-            Message {
-                content: "foo".to_owned(),
-                id: "1".to_owned(),
-            },
-            Message {
-                content: "bar".to_owned(),
-                id: "2".to_owned(),
-            },
-            Message {
-                content: "baz".to_owned(),
-                id: "3".to_owned(),
-            },
-        ])),
+        messages: Arc::new(Mutex::new(vec![])),
     });
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))
         .await
