@@ -29,6 +29,8 @@ impl axum::response::IntoResponse for MessageCreateResponseBody {
 
 #[derive(Debug, thiserror::Error)]
 pub enum MessageCreateError {
+    #[error("invalid message content")]
+    InvalidMessageContent(#[from] crate::model::write::MessageContentError),
     #[error("repository error")]
     Repository(#[from] MessageRepositoryError),
 }
@@ -36,6 +38,9 @@ pub enum MessageCreateError {
 impl axum::response::IntoResponse for MessageCreateError {
     fn into_response(self) -> axum::response::Response {
         match self {
+            MessageCreateError::InvalidMessageContent(_) => {
+                axum::http::StatusCode::BAD_REQUEST.into_response()
+            }
             MessageCreateError::Repository(e) => match e {
                 MessageRepositoryError::InternalError(_) => {
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -55,6 +60,7 @@ pub async fn handler<S: MessageRepository>(
     State(state): State<S>,
     Form(MessageCreateRequestBody { content }): Form<MessageCreateRequestBody>,
 ) -> Result<MessageCreateResponseBody, MessageCreateError> {
+    let content = crate::model::write::MessageContent::try_from(content)?;
     let message = crate::model::write::Message::create(content);
     MessageRepository::store(&state, None, &message)?;
     Ok(MessageCreateResponseBody {

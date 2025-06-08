@@ -1,5 +1,7 @@
 mod message;
+mod message_content;
 mod version;
 
 pub use self::message::Message;
+pub use self::message_content::{MessageContent, MessageContentError};
 pub use self::version::Version;

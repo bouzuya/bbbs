@@ -1,13 +1,14 @@
 use crate::model::shared::id::MessageId;
+use crate::model::write::MessageContent;
 
 #[derive(Clone)]
 pub struct Message {
-    pub content: String,
+    pub content: MessageContent,
     pub id: MessageId,
 }
 
 impl Message {
-    pub fn create(content: String) -> Self {
+    pub fn create(content: MessageContent) -> Self {
         Self {
             content,
             id: MessageId::generate(),
@@ -21,7 +22,7 @@ mod tests {
 
     #[test]
     fn test_message_create() {
-        let content = "Hello, world!".to_string();
+        let content = MessageContent::new_for_testing();
         let message = Message::create(content.clone());
         assert_eq!(message.content, content);
         assert!(!message.id.to_string().is_empty());
