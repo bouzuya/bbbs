@@ -1,4 +1,4 @@
-use axum::extract::State;
+use axum::{extract::State, response::IntoResponse};
 
 use crate::handler::AskamaTemplateExt;
 
@@ -19,7 +19,20 @@ async fn handler<S>(State(_): State<S>) -> RootResponse {
 }
 
 pub fn router<S: Clone + Send + Sync + 'static>() -> axum::Router<S> {
-    axum::Router::new().route("/", axum::routing::get(handler::<S>))
+    axum::Router::new()
+        .route("/", axum::routing::get(handler::<S>))
+        .route(
+            "/favicon.png",
+            axum::routing::get(|| async {
+                axum::response::Response::builder()
+                    .status(axum::http::StatusCode::OK)
+                    .header(axum::http::header::CONTENT_TYPE, "image/png")
+                    .body(axum::body::Body::from(
+                        include_bytes!("../../favicon/favicon.png").as_slice(),
+                    ))
+                    .expect("failed to build response")
+            }),
+        )
 }
 
 #[cfg(test)]
