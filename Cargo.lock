@@ -226,6 +226,7 @@ dependencies = [
  "http-body-util",
  "hyper",
  "serde",
+ "serde_json",
  "serde_urlencoded",
  "thiserror",
  "tokio",
