@@ -34,6 +34,7 @@ impl crate::handler::messages::MessageRepository for AppState {
         let mut messages = self.messages.lock().unwrap();
         messages.push(crate::model::read::Message {
             content: String::from(message.content.clone()),
+            created_at: message.created_at.to_string(),
             id: message.id.to_string(),
         });
         Ok(())

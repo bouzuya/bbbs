@@ -1,4 +1,4 @@
-use axum::{extract::State, response::IntoResponse};
+use axum::extract::State;
 
 use crate::handler::AskamaTemplateExt;
 

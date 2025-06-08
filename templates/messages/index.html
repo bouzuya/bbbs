@@ -24,7 +24,10 @@
                 <h1>messages</h1>
                 <ul>
                     {% for message in messages %}
-                    <li><a href="/messages/{{ message.id }}">{{ message.content }}</a></li>
+                    <li>
+                        <a href="/messages/{{ message.id }}">{{ message.content }}</a>
+                        <time datetime="{{ message.created_at }}">{{ message.created_at }}</time>
+                    </li>
                     {% endfor %}
                 </ul>
             </section>
