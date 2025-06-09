@@ -1,6 +1,5 @@
-#[derive(Clone)]
-pub struct Message {
-    pub content: String,
-    pub created_at: String,
-    pub id: String,
-}
+mod message;
+mod thread;
+
+pub use self::message::Message;
+pub use self::thread::Thread;
