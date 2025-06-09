@@ -14,7 +14,7 @@ pub struct ThreadError(#[source] Box<dyn std::error::Error + Send + Sync>);
 pub struct Thread {
     id: ThreadId,
     len: usize,
-    message: Message,
+    root_message: Message,
     version: Version,
 }
 
@@ -35,7 +35,7 @@ impl Thread {
             Self {
                 id,
                 len: 1,
-                message,
+                root_message: message,
                 version,
             },
             vec![event],
@@ -44,10 +44,6 @@ impl Thread {
 
     pub fn id(&self) -> &ThreadId {
         &self.id
-    }
-
-    pub fn message(&self) -> &Message {
-        &self.message
     }
 
     pub fn reply(&self, message: Message) -> Result<(Self, Vec<ThreadEvent>), ThreadError> {
@@ -70,11 +66,15 @@ impl Thread {
                 id: self.id.clone(),
                 // TODO: overflow check
                 len: self.len + 1,
-                message: self.message.clone(),
+                root_message: self.root_message.clone(),
                 version,
             },
             vec![event],
         ))
+    }
+
+    pub fn root_message(&self) -> &Message {
+        &self.root_message
     }
 
     pub fn version(&self) -> Version {
@@ -91,7 +91,7 @@ mod tests {
         let message = Message::new_for_testing();
         let (created, _events) = Thread::create(message.clone())?;
         assert!(!created.id().to_string().is_empty());
-        assert_eq!(created.message(), &message);
+        assert_eq!(created.root_message(), &message);
         assert_eq!(created.version(), Version::initial());
         Ok(())
     }
@@ -104,7 +104,7 @@ mod tests {
         let (replied, _events) = created.reply(reply_message.clone())?;
 
         assert_eq!(replied.id(), created.id());
-        assert_eq!(replied.message(), &root_message);
+        assert_eq!(replied.root_message(), &root_message);
         assert_eq!(replied.version(), created.version().next());
 
         // 1000 messages limit
