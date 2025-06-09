@@ -12,7 +12,13 @@ pub struct ThreadCreated {
     pub id: String,
     pub message_id: String,
     pub thread_id: String,
-    pub version: i64,
+    pub version: u32,
+}
+
+impl From<ThreadCreated> for ThreadEvent {
+    fn from(event: ThreadCreated) -> Self {
+        ThreadEvent::Created(event)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -22,7 +28,13 @@ pub struct ThreadReplied {
     pub id: String,
     pub message_id: String,
     pub thread_id: String,
-    pub version: i64,
+    pub version: u32,
+}
+
+impl From<ThreadReplied> for ThreadEvent {
+    fn from(event: ThreadReplied) -> Self {
+        ThreadEvent::Replied(event)
+    }
 }
 
 #[cfg(test)]
