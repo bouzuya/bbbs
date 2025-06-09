@@ -1,24 +1,45 @@
+use crate::model::shared::event::ThreadCreated;
+use crate::model::shared::event::ThreadEvent;
+use crate::model::shared::event::ThreadReplied;
+use crate::model::shared::id::EventId;
 use crate::model::shared::id::ThreadId;
 use crate::model::write::Message;
 use crate::model::write::Version;
+use crate::utils::date_time::DateTime;
 
 #[derive(Debug, thiserror::Error)]
 #[error("thread error")]
 pub struct ThreadError(#[source] Box<dyn std::error::Error + Send + Sync>);
 
 pub struct Thread {
-    pub id: ThreadId,
-    pub messages: Vec<Message>,
-    pub version: Version,
+    id: ThreadId,
+    len: usize,
+    message: Message,
+    version: Version,
 }
 
 impl Thread {
-    pub fn create(message: Message) -> Result<Self, ThreadError> {
-        Ok(Self {
-            id: ThreadId::generate(),
-            messages: vec![message],
-            version: Version::initial(),
-        })
+    pub fn create(message: Message) -> Result<(Self, Vec<ThreadEvent>), ThreadError> {
+        let id = ThreadId::generate();
+        let version = Version::initial();
+
+        let event = ThreadEvent::from(ThreadCreated {
+            at: DateTime::now().to_string(),
+            content: String::from(message.content.clone()),
+            id: EventId::generate().to_string(),
+            message_id: message.id.to_string(),
+            thread_id: id.to_string(),
+            version: u32::from(version),
+        });
+        Ok((
+            Self {
+                id,
+                len: 1,
+                message,
+                version,
+            },
+            vec![event],
+        ))
     }
 
     pub fn id(&self) -> &ThreadId {
@@ -26,26 +47,34 @@ impl Thread {
     }
 
     pub fn message(&self) -> &Message {
-        self.messages
-            .first()
-            .expect("Thread to have at least one message")
+        &self.message
     }
 
-    pub fn reply(&self, message: Message) -> Result<Self, ThreadError> {
-        if self.messages.len() == 1000 {
+    pub fn reply(&self, message: Message) -> Result<(Self, Vec<ThreadEvent>), ThreadError> {
+        if self.len == 1000 {
             return Err(ThreadError(
                 "Thread has reached the maximum number of messages".into(),
             ));
         }
-        Ok(Self {
-            id: self.id.clone(),
-            messages: {
-                let mut messages = self.messages.clone();
-                messages.push(message);
-                messages
+        let version = self.version.next();
+        let event = ThreadEvent::from(ThreadReplied {
+            at: DateTime::now().to_string(),
+            content: String::from(message.content.clone()),
+            id: EventId::generate().to_string(),
+            message_id: message.id.to_string(),
+            thread_id: self.id.to_string(),
+            version: u32::from(version),
+        });
+        Ok((
+            Self {
+                id: self.id.clone(),
+                // TODO: overflow check
+                len: self.len + 1,
+                message: self.message.clone(),
+                version,
             },
-            version: self.version.next(),
-        })
+            vec![event],
+        ))
     }
 
     pub fn version(&self) -> Version {
@@ -60,28 +89,28 @@ mod tests {
     #[test]
     fn test_create() -> anyhow::Result<()> {
         let message = Message::new_for_testing();
-        let thread = Thread::create(message.clone())?;
-        assert!(!thread.id().to_string().is_empty());
-        assert_eq!(thread.message(), &message);
-        assert_eq!(thread.version(), Version::initial());
+        let (created, _events) = Thread::create(message.clone())?;
+        assert!(!created.id().to_string().is_empty());
+        assert_eq!(created.message(), &message);
+        assert_eq!(created.version(), Version::initial());
         Ok(())
     }
 
     #[test]
     fn test_reply() -> anyhow::Result<()> {
-        let message = Message::new_for_testing();
-        let thread = Thread::create(message.clone())?;
+        let root_message = Message::new_for_testing();
+        let (created, _events) = Thread::create(root_message.clone())?;
         let reply_message = Message::new_for_testing();
-        let reply_thread = thread.reply(reply_message.clone())?;
+        let (replied, _events) = created.reply(reply_message.clone())?;
 
-        assert_eq!(reply_thread.id(), thread.id());
-        assert_eq!(reply_thread.message(), &message);
-        assert_eq!(reply_thread.version(), thread.version().next());
+        assert_eq!(replied.id(), created.id());
+        assert_eq!(replied.message(), &root_message);
+        assert_eq!(replied.version(), created.version().next());
 
         // 1000 messages limit
-        let mut t = reply_thread;
+        let mut t = replied;
         for _ in 0..998 {
-            t = t.reply(Message::new_for_testing())?;
+            (t, _) = t.reply(Message::new_for_testing())?;
         }
         assert!(t.reply(Message::new_for_testing()).is_err());
 
