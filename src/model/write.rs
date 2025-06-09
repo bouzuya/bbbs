@@ -1,5 +1,6 @@
 mod message;
 mod message_content;
+mod thread;
 mod version;
 
 pub use self::message::Message;
