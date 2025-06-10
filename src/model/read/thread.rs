@@ -37,23 +37,27 @@ impl Thread {
         };
 
         for event in iter {
-            match event {
-                ThreadEvent::Created(_) => {
-                    unreachable!("subsequent events not to be Created")
-                }
-                ThreadEvent::Replied(replied) => {
-                    let message = Message {
-                        content: replied.content,
-                        created_at: replied.at,
-                        id: replied.message_id,
-                    };
-                    thread.messages.push(message);
-                    thread.version = replied.version;
-                }
-            }
+            thread.apply(event);
         }
 
         thread
+    }
+
+    pub fn apply(&mut self, event: ThreadEvent) {
+        match event {
+            ThreadEvent::Created(_) => {
+                unreachable!("subsequent events not to be Created")
+            }
+            ThreadEvent::Replied(replied) => {
+                let message = Message {
+                    content: replied.content,
+                    created_at: replied.at,
+                    id: replied.message_id,
+                };
+                self.messages.push(message);
+                self.version = replied.version;
+            }
+        }
     }
 }
 
