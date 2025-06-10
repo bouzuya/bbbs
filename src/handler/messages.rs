@@ -25,15 +25,20 @@ pub enum MessageRepositoryError {
     },
 }
 
-pub trait MessageRepository {
+pub trait ThreadRepository {
+    fn find(
+        &self,
+        id: &crate::model::shared::id::ThreadId,
+    ) -> Result<Option<crate::model::write::Thread>, MessageRepositoryError>;
+
     fn store(
         &self,
         version: Option<crate::model::write::Version>,
-        message: &crate::model::write::Message,
+        events: &[crate::model::shared::event::ThreadEvent],
     ) -> Result<(), MessageRepositoryError>;
 }
 
-pub fn router<S: Clone + self::MessageReader + self::MessageRepository + Send + Sync + 'static>()
+pub fn router<S: Clone + self::MessageReader + self::ThreadRepository + Send + Sync + 'static>()
 -> axum::Router<S> {
     axum::Router::new()
         .route(
@@ -68,11 +73,22 @@ mod tests {
             self.0.clone()
         }
     }
-    impl MessageRepository for AppState {
+    impl ThreadRepository for AppState {
+        fn find(
+            &self,
+            _id: &crate::model::shared::id::ThreadId,
+        ) -> Result<Option<crate::model::write::Thread>, MessageRepositoryError> {
+            let (thread, _) = crate::model::write::Thread::create(
+                crate::model::write::Message::new_for_testing(),
+            )
+            .expect("dummy thread creation to be successful");
+            Ok(Some(thread))
+        }
+
         fn store(
             &self,
             _version: Option<crate::model::write::Version>,
-            _message: &crate::model::write::Message,
+            _thread: &[crate::model::shared::event::ThreadEvent],
         ) -> Result<(), MessageRepositoryError> {
             Ok(())
         }
@@ -92,6 +108,7 @@ mod tests {
             .body(axum::body::Body::new(serde_urlencoded::to_string(
                 self::create::MessageCreateRequestBody {
                     content: "hello".to_owned(),
+                    thread_id: "9b018a80-edcf-4a7b-89be-cc807bc2e647".to_owned(),
                 },
             )?))?;
         let response = send_request(router, request).await?;

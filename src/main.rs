@@ -4,9 +4,11 @@ mod utils;
 
 use std::sync::{Arc, Mutex};
 
+use crate::model::shared::event::ThreadReplied;
+
 struct Store {
     read: crate::model::read::Thread,
-    write: crate::model::write::Thread,
+    write: Vec<crate::model::shared::event::ThreadEvent>,
 }
 
 #[derive(Clone)]
@@ -16,16 +18,20 @@ struct AppState {
 
 impl AppState {
     fn new() -> Self {
-        let (thread, events) =
-            crate::model::write::Thread::create(crate::model::write::Message::create(
-                crate::model::write::MessageContent::try_from("_".to_owned())
-                    .expect("dummy message content to be valid"),
-            ))
-            .expect("dummy thread creation to be successful");
+        let events = vec![crate::model::shared::event::ThreadEvent::Created(
+            crate::model::shared::event::ThreadCreated {
+                at: crate::utils::date_time::DateTime::now().to_string(),
+                content: "_".to_owned(),
+                id: crate::model::shared::id::EventId::generate().to_string(),
+                message_id: crate::model::shared::id::MessageId::generate().to_string(),
+                thread_id: "5868d08d-12d7-468f-b77e-cb6e837baaf9".to_owned(),
+                version: 1,
+            },
+        )];
         AppState {
             store: Arc::new(Mutex::new(Store {
-                read: crate::model::read::Thread::replay(events),
-                write: thread,
+                read: crate::model::read::Thread::replay(events.clone()),
+                write: events,
             })),
         }
     }
@@ -47,26 +53,44 @@ impl crate::handler::messages::MessageReader for AppState {
     }
 }
 
-impl crate::handler::messages::MessageRepository for AppState {
+impl crate::handler::messages::ThreadRepository for AppState {
+    fn find(
+        &self,
+        _id: &crate::model::shared::id::ThreadId,
+    ) -> Result<Option<crate::model::write::Thread>, handler::messages::MessageRepositoryError>
+    {
+        // TODO: use id
+        let store = self.store.lock().unwrap();
+        Ok(Some(crate::model::write::Thread::replay(&store.write)))
+    }
+
     fn store(
         &self,
         _version: Option<crate::model::write::Version>,
-        // TODO: use event
-        message: &crate::model::write::Message,
+        events: &[crate::model::shared::event::ThreadEvent],
     ) -> Result<(), handler::messages::MessageRepositoryError> {
         let mut store = self.store.lock().unwrap();
-        // TODO: add event
-        store
-            .write
-            .reply(message.clone())
-            .map_err(Into::into)
-            .map_err(handler::messages::MessageRepositoryError::InternalError)?;
-        // TODO: use apply
-        store.read.messages.push(crate::model::read::Message {
-            content: String::from(message.content.clone()),
-            created_at: message.created_at.to_string(),
-            id: message.id.to_string(),
-        });
+        // TODO: check version
+        store.write.extend_from_slice(events);
+        for event in events {
+            match event {
+                model::shared::event::ThreadEvent::Created(_) => todo!(),
+                model::shared::event::ThreadEvent::Replied(ThreadReplied {
+                    at,
+                    content,
+                    id: _,
+                    message_id,
+                    thread_id: _,
+                    version: _,
+                }) => {
+                    store.read.messages.push(crate::model::read::Message {
+                        content: content.to_owned(),
+                        created_at: at.to_owned(),
+                        id: message_id.to_owned(),
+                    });
+                }
+            }
+        }
         Ok(())
     }
 }

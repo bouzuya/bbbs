@@ -35,6 +35,7 @@
             <section class="new-message">
                 <form action="/messages" method="post">
                     <input type="text" name="content" placeholder="メッセージを入力" required="required" />
+                    <input type="hidden" name="thread_id" value="{{ thread_id }}" />
                     <button type="submit">送信</button>
                 </form>
             </section>

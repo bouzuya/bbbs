@@ -4,7 +4,7 @@ pub mod root;
 pub fn router<
     S: Clone
         + self::messages::MessageReader
-        + self::messages::MessageRepository
+        + self::messages::ThreadRepository
         + Send
         + Sync
         + 'static,

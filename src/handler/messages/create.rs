@@ -1,10 +1,13 @@
+use std::str::FromStr as _;
+
 use axum::extract::{Form, State};
 
-use crate::handler::messages::{MessageRepository, MessageRepositoryError};
+use crate::handler::messages::{MessageRepositoryError, ThreadRepository};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct MessageCreateRequestBody {
     pub content: String,
+    pub thread_id: String,
 }
 
 #[derive(serde::Serialize)]
@@ -29,19 +32,33 @@ impl axum::response::IntoResponse for MessageCreateResponseBody {
 
 #[derive(Debug, thiserror::Error)]
 pub enum MessageCreateError {
+    #[error("find")]
+    Find(#[source] MessageRepositoryError),
     #[error("invalid message content")]
-    InvalidMessageContent(#[from] crate::model::write::MessageContentError),
-    #[error("repository error")]
-    Repository(#[from] MessageRepositoryError),
+    InvalidMessageContent(#[source] crate::model::write::MessageContentError),
+    #[error("invalid thread id")]
+    InvalidThreadId(#[source] crate::model::shared::id::ThreadIdError),
+    #[error("not found {0:?}")]
+    NotFound(crate::model::shared::id::ThreadId),
+    #[error("reply")]
+    Reply(#[source] crate::model::write::ThreadError),
+    #[error("store")]
+    Store(#[source] MessageRepositoryError),
 }
 
 impl axum::response::IntoResponse for MessageCreateError {
     fn into_response(self) -> axum::response::Response {
         match self {
+            MessageCreateError::Find(_) => axum::http::StatusCode::NOT_FOUND.into_response(),
             MessageCreateError::InvalidMessageContent(_) => {
                 axum::http::StatusCode::BAD_REQUEST.into_response()
             }
-            MessageCreateError::Repository(e) => match e {
+            MessageCreateError::InvalidThreadId(_) => {
+                axum::http::StatusCode::BAD_REQUEST.into_response()
+            }
+            MessageCreateError::NotFound(_) => axum::http::StatusCode::NOT_FOUND.into_response(),
+            MessageCreateError::Reply(_) => axum::http::StatusCode::BAD_REQUEST.into_response(),
+            MessageCreateError::Store(e) => match e {
                 MessageRepositoryError::InternalError(_) => {
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
                 }
@@ -56,13 +73,24 @@ impl axum::response::IntoResponse for MessageCreateError {
     }
 }
 
-pub async fn handler<S: MessageRepository>(
+pub async fn handler<S: ThreadRepository>(
     State(state): State<S>,
-    Form(MessageCreateRequestBody { content }): Form<MessageCreateRequestBody>,
+    Form(MessageCreateRequestBody { content, thread_id }): Form<MessageCreateRequestBody>,
 ) -> Result<MessageCreateResponseBody, MessageCreateError> {
-    let content = crate::model::write::MessageContent::try_from(content)?;
+    let content = crate::model::write::MessageContent::try_from(content)
+        .map_err(MessageCreateError::InvalidMessageContent)?;
+    let thread_id = crate::model::shared::id::ThreadId::from_str(&thread_id)
+        .map_err(MessageCreateError::InvalidThreadId)?;
     let message = crate::model::write::Message::create(content);
-    MessageRepository::store(&state, None, &message)?;
+
+    let thread = ThreadRepository::find(&state, &thread_id)
+        .map_err(MessageCreateError::Find)?
+        .ok_or_else(|| MessageCreateError::NotFound(thread_id))?;
+    let (_, events) = thread
+        .reply(message.clone())
+        .map_err(MessageCreateError::Reply)?;
+    ThreadRepository::store(&state, None, &events).map_err(MessageCreateError::Store)?;
+
     Ok(MessageCreateResponseBody {
         id: message.id.to_string(),
     })
