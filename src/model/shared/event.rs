@@ -15,6 +15,13 @@ impl ThreadEvent {
         })
         .expect("thread_id in event to be valid")
     }
+
+    pub fn version(&self) -> crate::model::write::Version {
+        crate::model::write::Version::from(match self {
+            ThreadEvent::Created(event) => event.version,
+            ThreadEvent::Replied(event) => event.version,
+        })
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
