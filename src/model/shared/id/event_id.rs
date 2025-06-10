@@ -2,7 +2,7 @@
 #[error("event id error")]
 pub struct EventIdError(#[source] Box<dyn std::error::Error + Send + Sync>);
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct EventId(uuid::Uuid);
 
 impl EventId {

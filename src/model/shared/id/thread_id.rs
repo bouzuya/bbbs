@@ -2,7 +2,7 @@
 #[error("thread id error")]
 pub struct ThreadIdError(#[source] Box<dyn std::error::Error + Send + Sync>);
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct ThreadId(uuid::Uuid);
 
 impl ThreadId {
