@@ -12,6 +12,12 @@ impl Version {
     }
 }
 
+impl From<u32> for Version {
+    fn from(value: u32) -> Self {
+        Self(value)
+    }
+}
+
 impl From<Version> for u32 {
     fn from(value: Version) -> Self {
         value.0
