@@ -1,8 +1,20 @@
+use std::str::FromStr as _;
+
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ThreadEvent {
     Created(ThreadCreated),
     Replied(ThreadReplied),
+}
+
+impl ThreadEvent {
+    pub fn thread_id(&self) -> crate::model::shared::id::ThreadId {
+        crate::model::shared::id::ThreadId::from_str(match self {
+            ThreadEvent::Created(event) => &event.thread_id,
+            ThreadEvent::Replied(event) => &event.thread_id,
+        })
+        .expect("thread_id in event to be valid")
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
