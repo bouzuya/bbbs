@@ -1,9 +1,13 @@
+use std::str::FromStr;
+
 use crate::model::shared::event::ThreadCreated;
 use crate::model::shared::event::ThreadEvent;
 use crate::model::shared::event::ThreadReplied;
 use crate::model::shared::id::EventId;
+use crate::model::shared::id::MessageId;
 use crate::model::shared::id::ThreadId;
 use crate::model::write::Message;
+use crate::model::write::MessageContent;
 use crate::model::write::Version;
 use crate::utils::date_time::DateTime;
 
@@ -40,6 +44,57 @@ impl Thread {
             },
             vec![event],
         ))
+    }
+
+    pub fn replay(events: &[ThreadEvent]) -> Self {
+        let mut iter = events.into_iter();
+
+        let first_event = iter.next().expect("events not to be empty");
+        let mut thread = match first_event {
+            ThreadEvent::Created(ThreadCreated {
+                at,
+                content,
+                id: _,
+                message_id,
+                thread_id,
+                version,
+            }) => Self {
+                id: ThreadId::from_str(&thread_id).expect("thread id in event to be valid"),
+                len: 1,
+                root_message: Message {
+                    content: MessageContent::try_from(content.to_owned())
+                        .expect("message content in event to be valid"),
+                    created_at: DateTime::from_str(&at)
+                        .expect("message created_at in event to be valid"),
+                    id: MessageId::from_str(&message_id).expect("message id in event to be valid"),
+                },
+                version: Version::from(*version),
+            },
+            ThreadEvent::Replied(_) => {
+                unreachable!("first event should be Created")
+            }
+        };
+
+        for event in iter {
+            match event {
+                ThreadEvent::Created(_) => {
+                    unreachable!("subsequent events not to be Created")
+                }
+                ThreadEvent::Replied(ThreadReplied {
+                    at: _,
+                    content: _,
+                    id: _,
+                    message_id: _,
+                    thread_id: _,
+                    version,
+                }) => {
+                    thread.len += 1;
+                    thread.version = Version::from(*version);
+                }
+            }
+        }
+
+        thread
     }
 
     pub fn id(&self) -> &ThreadId {
@@ -93,6 +148,26 @@ mod tests {
         assert!(!created.id().to_string().is_empty());
         assert_eq!(created.root_message(), &message);
         assert_eq!(created.version(), Version::initial());
+        Ok(())
+    }
+
+    #[test]
+    fn test_replay() -> anyhow::Result<()> {
+        let message = Message::new_for_testing();
+        let (created, created_events) = Thread::create(message.clone())?;
+        let (replied, replied_events) = created.reply(Message::new_for_testing())?;
+        let replayed = Thread::replay(
+            &created_events
+                .into_iter()
+                .chain(replied_events.into_iter())
+                .collect::<Vec<_>>(),
+        );
+
+        assert_eq!(replayed.id(), replied.id());
+        assert_eq!(replayed.root_message(), &replied.root_message);
+        assert_eq!(replayed.version(), replied.version());
+        assert_eq!(replayed.len, replied.len);
+
         Ok(())
     }
 
