@@ -11,7 +11,7 @@ pub trait MessageReader {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum MessageRepositoryError {
+pub enum ThreadRepositoryError {
     #[error("internal error: {0}")]
     InternalError(Box<dyn std::error::Error + Send + Sync>),
 
@@ -29,13 +29,13 @@ pub trait ThreadRepository {
     fn find(
         &self,
         id: &crate::model::shared::id::ThreadId,
-    ) -> Result<Option<crate::model::write::Thread>, MessageRepositoryError>;
+    ) -> Result<Option<crate::model::write::Thread>, ThreadRepositoryError>;
 
     fn store(
         &self,
         version: Option<crate::model::write::Version>,
         events: &[crate::model::shared::event::ThreadEvent],
-    ) -> Result<(), MessageRepositoryError>;
+    ) -> Result<(), ThreadRepositoryError>;
 }
 
 pub fn router<S: Clone + self::MessageReader + self::ThreadRepository + Send + Sync + 'static>()
@@ -77,7 +77,7 @@ mod tests {
         fn find(
             &self,
             _id: &crate::model::shared::id::ThreadId,
-        ) -> Result<Option<crate::model::write::Thread>, MessageRepositoryError> {
+        ) -> Result<Option<crate::model::write::Thread>, ThreadRepositoryError> {
             let (thread, _) = crate::model::write::Thread::create(
                 crate::model::write::Message::new_for_testing(),
             )
@@ -89,7 +89,7 @@ mod tests {
             &self,
             _version: Option<crate::model::write::Version>,
             _thread: &[crate::model::shared::event::ThreadEvent],
-        ) -> Result<(), MessageRepositoryError> {
+        ) -> Result<(), ThreadRepositoryError> {
             Ok(())
         }
     }
@@ -109,6 +109,7 @@ mod tests {
                 self::create::MessageCreateRequestBody {
                     content: "hello".to_owned(),
                     thread_id: "9b018a80-edcf-4a7b-89be-cc807bc2e647".to_owned(),
+                    version: 1,
                 },
             )?))?;
         let response = send_request(router, request).await?;

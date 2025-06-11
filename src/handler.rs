@@ -1,10 +1,12 @@
 pub mod messages;
 pub mod root;
+pub mod threads;
 
 pub fn router<
     S: Clone
         + self::messages::MessageReader
         + self::messages::ThreadRepository
+        + self::threads::ThreadReader
         + Send
         + Sync
         + 'static,
@@ -12,6 +14,7 @@ pub fn router<
     axum::Router::new()
         .merge(self::messages::router::<S>())
         .merge(self::root::router::<S>())
+        .merge(self::threads::router::<S>())
 }
 
 trait AskamaTemplateExt: askama::Template {

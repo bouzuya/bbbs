@@ -1,24 +1,23 @@
-use std::str::FromStr as _;
-
 use axum::extract::{Form, State};
 
-use crate::handler::messages::{ThreadRepository, ThreadRepositoryError};
+use crate::{
+    handler::messages::{ThreadRepositoryError, ThreadRepository},
+    model::write::Thread,
+};
 
 #[derive(serde::Deserialize, serde::Serialize)]
-pub struct MessageCreateRequestBody {
+pub struct ThreadCreateRequestBody {
     pub content: String,
-    pub thread_id: String,
-    pub version: u32,
 }
 
 #[derive(serde::Serialize)]
-pub struct MessageCreateResponseBody {
+pub struct ThreadCreateResponseBody {
     pub id: String,
 }
 
-impl axum::response::IntoResponse for MessageCreateResponseBody {
+impl axum::response::IntoResponse for ThreadCreateResponseBody {
     fn into_response(self) -> axum::response::Response {
-        let location = format!("/messages/{}", self.id);
+        let location = format!("/threads/{}", self.id);
         axum::response::Response::builder()
             .status(axum::http::StatusCode::SEE_OTHER)
             .header(
@@ -33,16 +32,10 @@ impl axum::response::IntoResponse for MessageCreateResponseBody {
 
 #[derive(Debug, thiserror::Error)]
 pub enum MessageCreateError {
-    #[error("find")]
-    Find(#[source] ThreadRepositoryError),
+    #[error("create")]
+    Create(#[source] crate::model::write::ThreadError),
     #[error("invalid message content")]
     InvalidMessageContent(#[source] crate::model::write::MessageContentError),
-    #[error("invalid thread id")]
-    InvalidThreadId(#[source] crate::model::shared::id::ThreadIdError),
-    #[error("not found {0:?}")]
-    NotFound(crate::model::shared::id::ThreadId),
-    #[error("reply")]
-    Reply(#[source] crate::model::write::ThreadError),
     #[error("store")]
     Store(#[source] ThreadRepositoryError),
 }
@@ -50,15 +43,10 @@ pub enum MessageCreateError {
 impl axum::response::IntoResponse for MessageCreateError {
     fn into_response(self) -> axum::response::Response {
         match self {
-            MessageCreateError::Find(_) => axum::http::StatusCode::NOT_FOUND.into_response(),
+            MessageCreateError::Create(_) => axum::http::StatusCode::BAD_REQUEST.into_response(),
             MessageCreateError::InvalidMessageContent(_) => {
                 axum::http::StatusCode::BAD_REQUEST.into_response()
             }
-            MessageCreateError::InvalidThreadId(_) => {
-                axum::http::StatusCode::BAD_REQUEST.into_response()
-            }
-            MessageCreateError::NotFound(_) => axum::http::StatusCode::NOT_FOUND.into_response(),
-            MessageCreateError::Reply(_) => axum::http::StatusCode::BAD_REQUEST.into_response(),
             MessageCreateError::Store(e) => match e {
                 ThreadRepositoryError::InternalError(_) => {
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -76,28 +64,16 @@ impl axum::response::IntoResponse for MessageCreateError {
 
 pub async fn handler<S: ThreadRepository>(
     State(state): State<S>,
-    Form(MessageCreateRequestBody {
-        content,
-        thread_id,
-        version,
-    }): Form<MessageCreateRequestBody>,
-) -> Result<MessageCreateResponseBody, MessageCreateError> {
+    Form(ThreadCreateRequestBody { content }): Form<ThreadCreateRequestBody>,
+) -> Result<ThreadCreateResponseBody, MessageCreateError> {
     let content = crate::model::write::MessageContent::try_from(content)
         .map_err(MessageCreateError::InvalidMessageContent)?;
-    let thread_id = crate::model::shared::id::ThreadId::from_str(&thread_id)
-        .map_err(MessageCreateError::InvalidThreadId)?;
-    let version = crate::model::write::Version::from(version);
     let message = crate::model::write::Message::create(content);
 
-    let thread = ThreadRepository::find(&state, &thread_id)
-        .map_err(MessageCreateError::Find)?
-        .ok_or_else(|| MessageCreateError::NotFound(thread_id))?;
-    let (_, events) = thread
-        .reply(message.clone())
-        .map_err(MessageCreateError::Reply)?;
-    ThreadRepository::store(&state, Some(version), &events).map_err(MessageCreateError::Store)?;
+    let (thread, events) = Thread::create(message.clone()).map_err(MessageCreateError::Create)?;
+    ThreadRepository::store(&state, None, &events).map_err(MessageCreateError::Store)?;
 
-    Ok(MessageCreateResponseBody {
-        id: message.id.to_string(),
+    Ok(ThreadCreateResponseBody {
+        id: thread.id().to_string(),
     })
 }

@@ -14,22 +14,28 @@
             <nav class="breadcrumbs">
                 <ol>
                     <li><a href="/">bbbs</a></li>
-                    <li><a href="/messages">messages</a></li>
+                    <li><a href="/threads">threads</a></li>
                 </ol>
             </nav>
         </header>
 
         <main class="page-body">
             <section class="message-list">
-                <h1>messages</h1>
+                <h1>threads</h1>
                 <ul>
-                    {% for message in messages %}
+                    {% for thread in threads %}
                     <li>
-                        <a href="/messages/{{ message.id }}">{{ message.content }}</a>
-                        <time datetime="{{ message.created_at }}">{{ message.created_at }}</time>
+                        <a href="/threads/{{ thread.id }}">{{ thread.messages[0].content }}</a>
                     </li>
                     {% endfor %}
                 </ul>
+            </section>
+
+            <section class="new-thread">
+                <form action="/threads" method="post">
+                    <input type="text" name="content" placeholder="メッセージを入力" required="required" />
+                    <button type="submit">送信</button>
+                </form>
             </section>
         </main>
     </div>

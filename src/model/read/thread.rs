@@ -3,6 +3,7 @@ use crate::model::{
     shared::event::{ThreadCreated, ThreadEvent},
 };
 
+#[derive(Clone)]
 pub struct Thread {
     pub id: String,
     pub messages: Vec<Message>,
