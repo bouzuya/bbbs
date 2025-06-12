@@ -2,44 +2,9 @@ mod create;
 mod get;
 mod list;
 
-pub trait MessageReader {
-    fn get_message(
-        &self,
-        id: &crate::model::shared::id::MessageId,
-    ) -> Option<crate::model::read::Message>;
-    fn list_messages(&self) -> Vec<crate::model::read::Message>;
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ThreadRepositoryError {
-    #[error("internal error: {0}")]
-    InternalError(Box<dyn std::error::Error + Send + Sync>),
-
-    #[error("not found {0:?}")]
-    NotFound(crate::model::shared::id::MessageId),
-
-    #[error("version mismatch (expected: {expected:?}, actual: {actual:?})")]
-    VersionMismatch {
-        actual: crate::model::write::Version,
-        expected: crate::model::write::Version,
-    },
-}
-
-pub trait ThreadRepository {
-    fn find(
-        &self,
-        id: &crate::model::shared::id::ThreadId,
-    ) -> Result<Option<crate::model::write::Thread>, ThreadRepositoryError>;
-
-    fn store(
-        &self,
-        version: Option<crate::model::write::Version>,
-        events: &[crate::model::shared::event::ThreadEvent],
-    ) -> Result<(), ThreadRepositoryError>;
-}
-
-pub fn router<S: Clone + self::MessageReader + self::ThreadRepository + Send + Sync + 'static>()
--> axum::Router<S> {
+pub fn router<
+    S: Clone + crate::port::MessageReader + crate::port::ThreadRepository + Send + Sync + 'static,
+>() -> axum::Router<S> {
     axum::Router::new()
         .route(
             "/messages",
@@ -60,7 +25,7 @@ mod tests {
 
     #[derive(Clone)]
     struct AppState(Vec<crate::model::read::Message>);
-    impl MessageReader for AppState {
+    impl crate::port::MessageReader for AppState {
         fn get_message(
             &self,
             id: &crate::model::shared::id::MessageId,
@@ -73,11 +38,12 @@ mod tests {
             self.0.clone()
         }
     }
-    impl ThreadRepository for AppState {
+    impl crate::port::ThreadRepository for AppState {
         fn find(
             &self,
             _id: &crate::model::shared::id::ThreadId,
-        ) -> Result<Option<crate::model::write::Thread>, ThreadRepositoryError> {
+        ) -> Result<Option<crate::model::write::Thread>, crate::port::ThreadRepositoryError>
+        {
             let (thread, _) = crate::model::write::Thread::create(
                 crate::model::write::Message::new_for_testing(),
             )
@@ -89,7 +55,7 @@ mod tests {
             &self,
             _version: Option<crate::model::write::Version>,
             _thread: &[crate::model::shared::event::ThreadEvent],
-        ) -> Result<(), ThreadRepositoryError> {
+        ) -> Result<(), crate::port::ThreadRepositoryError> {
             Ok(())
         }
     }

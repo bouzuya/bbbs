@@ -1,9 +1,8 @@
 use axum::extract::{Form, State};
 
-use crate::{
-    handler::messages::{ThreadRepositoryError, ThreadRepository},
-    model::write::Thread,
-};
+use crate::model::write::Thread;
+use crate::port::ThreadRepository;
+use crate::port::ThreadRepositoryError;
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct ThreadCreateRequestBody {

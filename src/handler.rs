@@ -4,9 +4,9 @@ pub mod threads;
 
 pub fn router<
     S: Clone
-        + self::messages::MessageReader
-        + self::messages::ThreadRepository
-        + self::threads::ThreadReader
+        + crate::port::MessageReader
+        + crate::port::ThreadRepository
+        + crate::port::ThreadReader
         + Send
         + Sync
         + 'static,

@@ -1,7 +1,7 @@
 use axum::extract::State;
 
 use crate::handler::AskamaTemplateExt;
-use crate::handler::messages::MessageReader;
+use crate::port::MessageReader;
 
 #[derive(askama::Template)]
 #[template(path = "messages/index.html")]

@@ -1,7 +1,7 @@
 use axum::extract::State;
 
 use crate::handler::AskamaTemplateExt;
-use crate::handler::threads::ThreadReader;
+use crate::port::ThreadReader;
 
 #[derive(askama::Template)]
 #[template(path = "threads/index.html")]

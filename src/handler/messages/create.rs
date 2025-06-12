@@ -2,7 +2,8 @@ use std::str::FromStr as _;
 
 use axum::extract::{Form, State};
 
-use crate::handler::messages::{ThreadRepository, ThreadRepositoryError};
+use crate::port::ThreadRepository;
+use crate::port::ThreadRepositoryError;
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct MessageCreateRequestBody {

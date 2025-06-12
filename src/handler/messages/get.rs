@@ -3,7 +3,7 @@ use std::str::FromStr as _;
 use axum::extract::{Path, State};
 
 use crate::handler::AskamaTemplateExt;
-use crate::handler::messages::MessageReader;
+use crate::port::MessageReader;
 
 #[derive(askama::Template)]
 #[template(path = "messages/[id].html")]
