@@ -178,16 +178,19 @@ mod tests {
                 content: "foo".to_owned(),
                 created_at: "2020-01-02T03:04:05Z".to_owned(),
                 id: "28cec994-e1c6-4987-b151-a4e66db42bda".to_owned(),
+                thread_id: "9b018a80-edcf-4a7b-89be-cc807bc2e647".to_owned(),
             },
             Message {
                 content: "bar".to_owned(),
                 created_at: "2020-01-03T03:04:05Z".to_owned(),
                 id: "e77392c9-3883-456c-9add-288e4c2ca980".to_owned(),
+                thread_id: "9b018a80-edcf-4a7b-89be-cc807bc2e647".to_owned(),
             },
             Message {
                 content: "baz".to_owned(),
                 created_at: "2020-01-04T03:04:05Z".to_owned(),
                 id: "7402f8d6-7f12-40f5-875d-b473ac7306c5".to_owned(),
+                thread_id: "9b018a80-edcf-4a7b-89be-cc807bc2e647".to_owned(),
             },
         ])
     }

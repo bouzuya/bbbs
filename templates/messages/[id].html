@@ -24,9 +24,10 @@
             <section class="message-list">
                 <h1>message</h1>
                 <div>
-                    <p>{{ message.id }}</p>
+                    <p><a href="/threads/{{ message.thread_id }}">/threads/{{ message.thread_id }}</a></p>
                     <p>{{ message.content }}</p>
-                    <time datetime="{{ message.created_at }}">{{ message.created_at }}</time>
+                    <p><a href="/messages/{{ message.id }}"><time datetime="{{ message.created_at }}">{{
+                                message.created_at }}</time></a></p>
                 </div>
             </section>
         </main>

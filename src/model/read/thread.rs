@@ -1,6 +1,6 @@
 use crate::model::{
     read::Message,
-    shared::event::{ThreadCreated, ThreadEvent},
+    shared::event::{ThreadCreated, ThreadEvent, ThreadReplied},
 };
 
 #[derive(Clone)]
@@ -24,11 +24,12 @@ impl Thread {
                 thread_id,
                 version,
             }) => Self {
-                id: thread_id,
+                id: thread_id.clone(),
                 messages: vec![Message {
                     content,
                     created_at: at,
                     id: message_id,
+                    thread_id,
                 }],
                 version,
             },
@@ -49,14 +50,22 @@ impl Thread {
             ThreadEvent::Created(_) => {
                 unreachable!("subsequent events not to be Created")
             }
-            ThreadEvent::Replied(replied) => {
+            ThreadEvent::Replied(ThreadReplied {
+                at,
+                content,
+                id: _,
+                message_id,
+                thread_id,
+                version,
+            }) => {
                 let message = Message {
-                    content: replied.content,
-                    created_at: replied.at,
-                    id: replied.message_id,
+                    content,
+                    created_at: at,
+                    id: message_id,
+                    thread_id,
                 };
                 self.messages.push(message);
-                self.version = replied.version;
+                self.version = version;
             }
         }
     }

@@ -107,7 +107,7 @@ impl crate::handler::messages::ThreadRepository for AppState {
                     content,
                     id: _,
                     message_id,
-                    thread_id: _,
+                    thread_id,
                     version: _,
                 }) => {
                     let message_id = crate::model::shared::id::MessageId::from_str(message_id)
@@ -116,6 +116,7 @@ impl crate::handler::messages::ThreadRepository for AppState {
                         id: message_id.to_string(),
                         content: content.clone(),
                         created_at: at.clone(),
+                        thread_id: thread_id.clone(),
                     };
                     store.read.messages.insert(message_id, message);
                 }
@@ -124,7 +125,7 @@ impl crate::handler::messages::ThreadRepository for AppState {
                     content,
                     id: _,
                     message_id,
-                    thread_id: _,
+                    thread_id,
                     version: _,
                 }) => {
                     let message_id = crate::model::shared::id::MessageId::from_str(message_id)
@@ -133,6 +134,7 @@ impl crate::handler::messages::ThreadRepository for AppState {
                         id: message_id.to_string(),
                         content: content.clone(),
                         created_at: at.clone(),
+                        thread_id: thread_id.clone(),
                     };
                     store.read.messages.insert(message_id, message);
                 }
