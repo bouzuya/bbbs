@@ -13,8 +13,8 @@
             <div class="site-title"><a href="/">bbbs</a></div>
             <nav class="breadcrumbs">
                 <ol>
-                    <li><a href="/">bbbs</a></li>
-                    <li><a href="/threads">threads</a></li>
+                    <li><a href="/">/</a></li>
+                    <li><a href="/threads">/threads</a></li>
                 </ol>
             </nav>
         </header>
@@ -25,7 +25,9 @@
                 <ul>
                     {% for thread in threads %}
                     <li>
-                        <a href="/threads/{{ thread.id }}">{{ thread.messages[0].content }}</a>
+                        {{ thread.messages[0].content }}
+                        <a href="/threads/{{ thread.id }}"><time datetime="{{ thread.messages[0].created_at }}">{{
+                                thread.messages[0].created_at }}</time></a>
                     </li>
                     {% endfor %}
                 </ul>
@@ -33,8 +35,8 @@
 
             <section class="new-thread">
                 <form action="/threads" method="post">
-                    <input type="text" name="content" placeholder="メッセージを入力" required="required" />
-                    <button type="submit">送信</button>
+                    <input type="text" name="content" placeholder="please enter a message" required="required" />
+                    <button type="submit">create thread</button>
                 </form>
             </section>
         </main>

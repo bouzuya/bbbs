@@ -13,9 +13,9 @@
             <div class="site-title"><a href="/">bbbs</a></div>
             <nav class="breadcrumbs">
                 <ol>
-                    <li><a href="/">bbbs</a></li>
-                    <li><a href="/threads">threads</a></li>
-                    <li><a href="/threads/{{ thread.id }}">{{ thread.id }}</a></li>
+                    <li><a href="/">/</a></li>
+                    <li><a href="/threads">/threads</a></li>
+                    <li><a href="/threads/{{ thread.id }}">/threads/{{ thread.id }}</a></li>
                 </ol>
             </nav>
         </header>
@@ -36,10 +36,10 @@
 
             <section class="new-message">
                 <form action="/messages" method="post">
-                    <input type="text" name="content" placeholder="メッセージを入力" required="required" />
+                    <input type="text" name="content" placeholder="please enter a message" required="required" />
                     <input type="hidden" name="thread_id" value="{{ thread.id }}" />
                     <input type="hidden" name="version" value="{{ thread.version }}" />
-                    <button type="submit">送信</button>
+                    <button type="submit">reply</button>
                 </form>
             </section>
         </main>
