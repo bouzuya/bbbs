@@ -23,6 +23,7 @@
         <main class="page-body">
             <section class="message-list">
                 <h1>thread</h1>
+                <p>replies count: {{ thread.replies_count }}</p>
                 <ul>
                     {% for message in thread.messages %}
                     <li>

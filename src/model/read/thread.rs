@@ -7,6 +7,7 @@ use crate::model::{
 pub struct Thread {
     pub id: String,
     pub messages: Vec<Message>,
+    pub replies_count: usize,
     pub version: u32,
 }
 
@@ -31,6 +32,7 @@ impl Thread {
                     id: message_id,
                     thread_id,
                 }],
+                replies_count: 0,
                 version,
             },
             ThreadEvent::Replied(_) => {
@@ -65,6 +67,7 @@ impl Thread {
                     thread_id,
                 };
                 self.messages.push(message);
+                self.replies_count += 1;
                 self.version = version;
             }
         }
@@ -103,6 +106,7 @@ mod tests {
         assert_eq!(thread.messages.len(), 2);
         assert_eq!(thread.messages[0].content, "Root message");
         assert_eq!(thread.messages[1].content, "Reply message");
+        assert_eq!(thread.replies_count, 2);
         assert_eq!(thread.version, 2);
     }
 }
