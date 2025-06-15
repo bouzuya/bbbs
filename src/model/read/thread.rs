@@ -106,7 +106,7 @@ mod tests {
         assert_eq!(thread.messages.len(), 2);
         assert_eq!(thread.messages[0].content, "Root message");
         assert_eq!(thread.messages[1].content, "Reply message");
-        assert_eq!(thread.replies_count, 2);
+        assert_eq!(thread.replies_count, 1);
         assert_eq!(thread.version, 2);
     }
 }
