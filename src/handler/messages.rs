@@ -1,4 +1,3 @@
-mod create;
 mod get;
 mod list;
 
@@ -6,10 +5,7 @@ pub fn router<
     S: Clone + crate::port::MessageReader + crate::port::ThreadRepository + Send + Sync + 'static,
 >() -> axum::Router<S> {
     axum::Router::new()
-        .route(
-            "/messages",
-            axum::routing::get(self::list::handler::<S>).post(self::create::handler::<S>),
-        )
+        .route("/messages", axum::routing::get(self::list::handler::<S>))
         .route(
             "/messages/{id}",
             axum::routing::get(self::get::handler::<S>),
@@ -58,31 +54,6 @@ mod tests {
         ) -> Result<(), crate::port::ThreadRepositoryError> {
             Ok(())
         }
-    }
-
-    #[tokio::test]
-    async fn test_create() -> anyhow::Result<()> {
-        let router = router().with_state(build_app_state());
-
-        let request = axum::http::Request::builder()
-            .header(
-                axum::http::header::CONTENT_TYPE,
-                "application/x-www-form-urlencoded",
-            )
-            .method(axum::http::Method::POST)
-            .uri("/messages")
-            .body(axum::body::Body::new(serde_urlencoded::to_string(
-                self::create::MessageCreateRequestBody {
-                    content: "hello".to_owned(),
-                    thread_id: "9b018a80-edcf-4a7b-89be-cc807bc2e647".to_owned(),
-                    version: 1,
-                },
-            )?))?;
-        let response = send_request(router, request).await?;
-
-        assert_eq!(response.status(), axum::http::StatusCode::SEE_OTHER);
-        assert_eq!(response.into_body_string().await?, "");
-        Ok(())
     }
 
     #[tokio::test]
