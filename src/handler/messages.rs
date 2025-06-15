@@ -1,15 +1,12 @@
 mod get;
-mod list;
 
 pub fn router<
     S: Clone + crate::port::MessageReader + crate::port::ThreadRepository + Send + Sync + 'static,
 >() -> axum::Router<S> {
-    axum::Router::new()
-        .route("/messages", axum::routing::get(self::list::handler::<S>))
-        .route(
-            "/messages/{id}",
-            axum::routing::get(self::get::handler::<S>),
-        )
+    axum::Router::new().route(
+        "/messages/{id}",
+        axum::routing::get(self::get::handler::<S>),
+    )
 }
 
 #[cfg(test)]
@@ -84,27 +81,6 @@ mod tests {
 
         assert_eq!(response.status(), axum::http::StatusCode::NOT_FOUND);
         assert_eq!(response.into_body_string().await?, "");
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_list() -> anyhow::Result<()> {
-        let router = router().with_state(build_app_state());
-
-        let request = axum::http::Request::builder()
-            .method(axum::http::Method::GET)
-            .uri("/messages")
-            .body(axum::body::Body::empty())?;
-        let response = send_request(router, request).await?;
-
-        assert_eq!(response.status(), axum::http::StatusCode::OK);
-        let body = response.into_body_string().await?;
-        assert!(body.contains("/messages/28cec994-e1c6-4987-b151-a4e66db42bda"));
-        assert!(body.contains("foo"));
-        assert!(body.contains("/messages/e77392c9-3883-456c-9add-288e4c2ca980"));
-        assert!(body.contains("bar"));
-        assert!(body.contains("/messages/7402f8d6-7f12-40f5-875d-b473ac7306c5"));
-        assert!(body.contains("baz"));
         Ok(())
     }
 
