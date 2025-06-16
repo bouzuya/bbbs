@@ -28,8 +28,8 @@
                     {% for message in thread.messages %}
                     <li>
                         {{ message.content }}
-                        <a href="/messages/{{ message.id }}"><time datetime="{{ message.created_at }}">{{
-                                message.created_at }}</time></a>
+                        <time datetime="{{ message.created_at }}">{{
+                            message.created_at }}</time>
                     </li>
                     {% endfor %}
                 </ul>

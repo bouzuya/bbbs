@@ -1,4 +1,3 @@
-pub mod messages;
 pub mod root;
 pub mod threads;
 
@@ -12,7 +11,6 @@ pub fn router<
         + 'static,
 >() -> axum::Router<S> {
     axum::Router::new()
-        .merge(self::messages::router::<S>())
         .merge(self::root::router::<S>())
         .merge(self::threads::router::<S>())
 }
