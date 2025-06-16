@@ -29,7 +29,6 @@ impl Thread {
                     content,
                     created_at: at,
                     number: 1,
-                    thread_id,
                 }],
                 replies_count: 0,
                 version,
@@ -55,14 +54,13 @@ impl Thread {
                 at,
                 content,
                 id: _,
-                thread_id,
+                thread_id: _,
                 version,
             }) => {
                 let message = Message {
                     content,
                     created_at: at,
                     number: self.replies_count + 1,
-                    thread_id,
                 };
                 self.messages.push(message);
                 self.replies_count += 1;
