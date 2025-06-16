@@ -7,7 +7,7 @@ use crate::model::{
 pub struct Thread {
     pub id: String,
     pub messages: Vec<Message>,
-    pub replies_count: usize,
+    pub replies_count: u16,
     pub version: u32,
 }
 
@@ -21,7 +21,6 @@ impl Thread {
                 at,
                 content,
                 id: _,
-                message_id,
                 thread_id,
                 version,
             }) => Self {
@@ -29,7 +28,7 @@ impl Thread {
                 messages: vec![Message {
                     content,
                     created_at: at,
-                    id: message_id,
+                    number: 1,
                     thread_id,
                 }],
                 replies_count: 0,
@@ -56,14 +55,13 @@ impl Thread {
                 at,
                 content,
                 id: _,
-                message_id,
                 thread_id,
                 version,
             }) => {
                 let message = Message {
                     content,
                     created_at: at,
-                    id: message_id,
+                    number: self.replies_count + 1,
                     thread_id,
                 };
                 self.messages.push(message);
@@ -87,7 +85,6 @@ mod tests {
                 at: "2023-10-01T00:00:00Z".to_string(),
                 content: "Root message".to_string(),
                 id: "99164b55-98d0-4e7c-98cf-95f7c43da68f".to_string(),
-                message_id: "e931858a-4159-487f-8537-4cbe118aba67".to_string(),
                 thread_id: "c4ac95d6-45c7-4006-b768-2a172dee3f81".to_string(),
                 version: 1,
             }),
@@ -95,7 +92,6 @@ mod tests {
                 at: "2023-10-01T01:00:00Z".to_string(),
                 content: "Reply message".to_string(),
                 id: "4f24e399-d53a-4779-af3e-3fdfdd00f8c5".to_string(),
-                message_id: "5f4c5580-b3f5-4c75-862e-a7f975c9d2b0".to_string(),
                 thread_id: "c4ac95d6-45c7-4006-b768-2a172dee3f81".to_string(),
                 version: 2,
             }),

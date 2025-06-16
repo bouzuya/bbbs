@@ -27,6 +27,7 @@
                 <ul>
                     {% for message in thread.messages %}
                     <li>
+                        {{ message.number }}:
                         {{ message.content }}
                         <time datetime="{{ message.created_at }}">{{
                             message.created_at }}</time>

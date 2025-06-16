@@ -4,7 +4,6 @@ use crate::model::shared::event::ThreadCreated;
 use crate::model::shared::event::ThreadEvent;
 use crate::model::shared::event::ThreadReplied;
 use crate::model::shared::id::EventId;
-use crate::model::shared::id::MessageId;
 use crate::model::shared::id::ThreadId;
 use crate::model::write::Message;
 use crate::model::write::MessageContent;
@@ -17,7 +16,7 @@ pub struct ThreadError(#[source] Box<dyn std::error::Error + Send + Sync>);
 
 pub struct Thread {
     id: ThreadId,
-    len: usize,
+    message_count: usize,
     root_message: Message,
     version: Version,
 }
@@ -31,14 +30,13 @@ impl Thread {
             at: DateTime::now().to_string(),
             content: String::from(message.content.clone()),
             id: EventId::generate().to_string(),
-            message_id: message.id.to_string(),
             thread_id: id.to_string(),
             version: u32::from(version),
         });
         Ok((
             Self {
                 id,
-                len: 1,
+                message_count: 1,
                 root_message: message,
                 version,
             },
@@ -55,18 +53,16 @@ impl Thread {
                 at,
                 content,
                 id: _,
-                message_id,
                 thread_id,
                 version,
             }) => Self {
                 id: ThreadId::from_str(&thread_id).expect("thread id in event to be valid"),
-                len: 1,
+                message_count: 1,
                 root_message: Message {
                     content: MessageContent::try_from(content.to_owned())
                         .expect("message content in event to be valid"),
                     created_at: DateTime::from_str(&at)
                         .expect("message created_at in event to be valid"),
-                    id: MessageId::from_str(&message_id).expect("message id in event to be valid"),
                 },
                 version: Version::from(*version),
             },
@@ -84,11 +80,10 @@ impl Thread {
                     at: _,
                     content: _,
                     id: _,
-                    message_id: _,
                     thread_id: _,
                     version,
                 }) => {
-                    thread.len += 1;
+                    thread.message_count += 1;
                     thread.version = Version::from(*version);
                 }
             }
@@ -102,7 +97,7 @@ impl Thread {
     }
 
     pub fn reply(&self, message: Message) -> Result<(Self, Vec<ThreadEvent>), ThreadError> {
-        if self.len == 1000 {
+        if self.message_count == 1000 {
             return Err(ThreadError(
                 "Thread has reached the maximum number of messages".into(),
             ));
@@ -112,15 +107,13 @@ impl Thread {
             at: DateTime::now().to_string(),
             content: String::from(message.content.clone()),
             id: EventId::generate().to_string(),
-            message_id: message.id.to_string(),
             thread_id: self.id.to_string(),
             version: u32::from(version),
         });
         Ok((
             Self {
                 id: self.id.clone(),
-                // TODO: overflow check
-                len: self.len + 1,
+                message_count: self.message_count + 1,
                 root_message: self.root_message.clone(),
                 version,
             },
@@ -166,7 +159,7 @@ mod tests {
         assert_eq!(replayed.id(), replied.id());
         assert_eq!(replayed.root_message(), &replied.root_message);
         assert_eq!(replayed.version(), replied.version());
-        assert_eq!(replayed.len, replied.len);
+        assert_eq!(replayed.message_count, replied.message_count);
 
         Ok(())
     }

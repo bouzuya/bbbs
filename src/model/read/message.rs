@@ -2,6 +2,6 @@
 pub struct Message {
     pub content: String,
     pub created_at: String,
-    pub id: String,
+    pub number: u16,
     pub thread_id: String,
 }

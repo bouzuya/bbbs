@@ -1,13 +1,9 @@
 use std::{
     collections::BTreeMap,
-    str::FromStr as _,
     sync::{Arc, Mutex},
 };
 
-use crate::model::shared::event::{ThreadCreated, ThreadReplied};
-
 struct ReadStore {
-    messages: BTreeMap<crate::model::shared::id::MessageId, crate::model::read::Message>,
     threads: BTreeMap<crate::model::shared::id::ThreadId, crate::model::read::Thread>,
 }
 
@@ -27,27 +23,11 @@ impl AppState {
         AppState {
             store: Arc::new(Mutex::new(Store {
                 read: ReadStore {
-                    messages: BTreeMap::new(),
                     threads: BTreeMap::new(),
                 },
                 write: BTreeMap::new(),
             })),
         }
-    }
-}
-
-impl crate::port::MessageReader for AppState {
-    fn get_message(
-        &self,
-        id: &crate::model::shared::id::MessageId,
-    ) -> Option<crate::model::read::Message> {
-        let store = self.store.lock().unwrap();
-        store.read.messages.get(id).cloned()
-    }
-
-    fn list_messages(&self) -> Vec<crate::model::read::Message> {
-        let store = self.store.lock().unwrap();
-        store.read.messages.values().cloned().collect()
     }
 }
 
@@ -106,47 +86,6 @@ impl crate::port::ThreadRepository for AppState {
                 }
                 None => return Err(crate::port::ThreadRepositoryError::NotFound(thread_id)),
             },
-        }
-
-        for event in events {
-            match event {
-                crate::model::shared::event::ThreadEvent::Created(ThreadCreated {
-                    at,
-                    content,
-                    id: _,
-                    message_id,
-                    thread_id,
-                    version: _,
-                }) => {
-                    let message_id = crate::model::shared::id::MessageId::from_str(message_id)
-                        .expect("message_id to be valid");
-                    let message = crate::model::read::Message {
-                        id: message_id.to_string(),
-                        content: content.clone(),
-                        created_at: at.clone(),
-                        thread_id: thread_id.clone(),
-                    };
-                    store.read.messages.insert(message_id, message);
-                }
-                crate::model::shared::event::ThreadEvent::Replied(ThreadReplied {
-                    at,
-                    content,
-                    id: _,
-                    message_id,
-                    thread_id,
-                    version: _,
-                }) => {
-                    let message_id = crate::model::shared::id::MessageId::from_str(message_id)
-                        .expect("message_id to be valid");
-                    let message = crate::model::read::Message {
-                        id: message_id.to_string(),
-                        content: content.clone(),
-                        created_at: at.clone(),
-                        thread_id: thread_id.clone(),
-                    };
-                    store.read.messages.insert(message_id, message);
-                }
-            }
         }
 
         match store.read.threads.get_mut(&thread_id) {

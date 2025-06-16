@@ -153,13 +153,13 @@ mod tests {
                     crate::model::read::Message {
                         content: "New thread content".to_owned(),
                         created_at: "2020-01-02T03:04:05Z".to_owned(),
-                        id: "28cec994-e1c6-4987-b151-a4e66db42bda".to_owned(),
+                        number: 1,
                         thread_id: "9b018a80-edcf-4a7b-89be-cc807bc2e647".to_owned(),
                     },
                     crate::model::read::Message {
                         content: "Reply content".to_owned(),
                         created_at: "2020-01-02T04:05:06Z".to_owned(),
-                        id: "e77392c9-3883-456c-9add-288e4c2ca980".to_owned(),
+                        number: 2,
                         thread_id: "9b018a80-edcf-4a7b-89be-cc807bc2e647".to_owned(),
                     },
                 ],
@@ -171,7 +171,7 @@ mod tests {
                 messages: vec![crate::model::read::Message {
                     content: "Test Thread 2".to_owned(),
                     created_at: "2020-01-02T05:06:07Z".to_owned(),
-                    id: "7402f8d6-7f12-40f5-875d-b473ac7306c5".to_owned(),
+                    number: 1,
                     thread_id: "a2d3f8e9-4c5b-6d7e-8f9a-0b1c2d3e4f5g".to_owned(),
                 }],
                 replies_count: 0,

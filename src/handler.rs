@@ -2,13 +2,7 @@ pub mod root;
 pub mod threads;
 
 pub fn router<
-    S: Clone
-        + crate::port::MessageReader
-        + crate::port::ThreadRepository
-        + crate::port::ThreadReader
-        + Send
-        + Sync
-        + 'static,
+    S: Clone + crate::port::ThreadRepository + crate::port::ThreadReader + Send + Sync + 'static,
 >() -> axum::Router<S> {
     axum::Router::new()
         .merge(self::root::router::<S>())

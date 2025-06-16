@@ -29,7 +29,6 @@ pub struct ThreadCreated {
     pub at: String,
     pub content: String,
     pub id: String,
-    pub message_id: String,
     pub thread_id: String,
     pub version: u32,
 }
@@ -45,7 +44,6 @@ pub struct ThreadReplied {
     pub at: String,
     pub content: String,
     pub id: String,
-    pub message_id: String,
     pub thread_id: String,
     pub version: u32,
 }
@@ -65,7 +63,6 @@ mod tests {
         let at = "2023-10-01T12:00:00.000Z".to_owned();
         let content = "Hello, world!".to_owned();
         let id = "0779b098-f41d-404a-b055-36463a7c009b".to_owned();
-        let message_id = "524313c5-6810-4f5d-a2a1-66a2224c74dc".to_owned();
         let thread_id = "b8392399-53a3-4f8e-8288-875448037455".to_owned();
         let version = 1;
         assert_eq!(
@@ -76,7 +73,6 @@ mod tests {
     "content": "{content}",
     "id": "{id}",
     "kind": "created",
-    "message_id": "{message_id}",
     "thread_id": "{thread_id}",
     "version": {version}
 }}"#
@@ -85,7 +81,6 @@ mod tests {
                 at,
                 content,
                 id,
-                message_id,
                 thread_id,
                 version,
             })
@@ -98,7 +93,6 @@ mod tests {
         let at = "2023-10-01T12:00:00.000Z".to_owned();
         let content = "Reply to message".to_owned();
         let id = "0779b098-f41d-404a-b055-36463a7c009b".to_owned();
-        let message_id = "524313c5-6810-4f5d-a2a1-66a2224c74dc".to_owned();
         let thread_id = "b8392399-53a3-4f8e-8288-875448037455".to_owned();
         let version = 2;
         assert_eq!(
@@ -109,7 +103,6 @@ mod tests {
     "content": "{content}",
     "id": "{id}",
     "kind": "replied",
-    "message_id": "{message_id}",
     "thread_id": "{thread_id}",
     "version": {version}
 }}"#
@@ -118,7 +111,6 @@ mod tests {
                 at,
                 content,
                 id,
-                message_id,
                 thread_id,
                 version,
             })
