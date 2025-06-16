@@ -36,7 +36,7 @@
             </section>
 
             <section class="new-message">
-                <form action="/threads/{{ thread.id }}/reply" method="post">
+                <form action="/threads/{{ thread.id }}/messages" method="post">
                     <input type="text" name="content" placeholder="please enter a message" required="required" />
                     <input type="hidden" name="version" value="{{ thread.version }}" />
                     <button type="submit">reply</button>

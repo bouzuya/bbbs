@@ -13,7 +13,7 @@ pub fn router<
         )
         .route("/threads/{id}", axum::routing::get(self::get::handler::<S>))
         .route(
-            "/threads/{id}/reply",
+            "/threads/{id}/messages",
             axum::routing::post(self::reply::handler::<S>),
         )
 }
@@ -135,7 +135,7 @@ mod tests {
 
         let request = axum::http::Request::builder()
             .method(axum::http::Method::POST)
-            .uri("/threads/9b018a80-edcf-4a7b-89be-cc807bc2e647/reply")
+            .uri("/threads/9b018a80-edcf-4a7b-89be-cc807bc2e647/messages")
             .header("content-type", "application/x-www-form-urlencoded")
             .body(axum::body::Body::from("content=Reply content&version=1"))?;
         let response = send_request(router, request).await?;
