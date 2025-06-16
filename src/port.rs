@@ -1,11 +1,3 @@
-pub trait MessageReader {
-    fn get_message(
-        &self,
-        id: &crate::model::shared::id::MessageId,
-    ) -> Option<crate::model::read::Message>;
-    fn list_messages(&self) -> Vec<crate::model::read::Message>;
-}
-
 pub trait ThreadReader {
     fn get_thread(
         &self,
