@@ -25,9 +25,14 @@
                 <ul>
                     {% for thread in threads %}
                     <li>
-                        {{ thread.messages[0].content }} ({{ thread.replies_count }}) <a
-                            href="/threads/{{ thread.id }}"><time datetime="{{ thread.messages[0].created_at }}">{{
-                                thread.messages[0].created_at }}</time></a>
+                        <div>
+                            <a href="/threads/{{ thread.id }}"><code>{{ thread.id }}</code></a>
+                            <time datetime="{{ thread.created_at }}">{{ thread.created_at }}</time>
+                        </div>
+                        <div>
+                            <span>{{ thread.messages[0].content }}</span>
+                            <span>({{ thread.replies_count }})</span>
+                        </div>
                     </li>
                     {% endfor %}
                 </ul>

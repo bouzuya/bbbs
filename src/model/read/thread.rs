@@ -5,6 +5,7 @@ use crate::model::{
 
 #[derive(Clone)]
 pub struct Thread {
+    pub created_at: String,
     pub id: String,
     pub messages: Vec<Message>,
     pub replies_count: u16,
@@ -24,6 +25,7 @@ impl Thread {
                 thread_id,
                 version,
             }) => Self {
+                created_at: at.clone(),
                 id: thread_id.clone(),
                 messages: vec![Message {
                     content,
@@ -96,6 +98,7 @@ mod tests {
         ];
 
         let thread = Thread::replay(events);
+        assert_eq!(thread.created_at, "2023-10-01T00:00:00Z");
         assert_eq!(thread.id, "c4ac95d6-45c7-4006-b768-2a172dee3f81");
         assert_eq!(thread.messages.len(), 2);
         assert_eq!(thread.messages[0].content, "Root message");
