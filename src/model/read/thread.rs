@@ -7,6 +7,7 @@ use crate::model::{
 pub struct Thread {
     pub created_at: String,
     pub id: String,
+    pub last_message: Message,
     pub messages: Vec<Message>,
     pub replies_count: u16,
     pub version: u32,
@@ -27,6 +28,11 @@ impl Thread {
             }) => Self {
                 created_at: at.clone(),
                 id: thread_id.clone(),
+                last_message: Message {
+                    content: content.clone(),
+                    created_at: at.clone(),
+                    number: 1,
+                },
                 messages: vec![Message {
                     content,
                     created_at: at,
@@ -64,6 +70,7 @@ impl Thread {
                     created_at: at,
                     number: self.replies_count + 1,
                 };
+                self.last_message = message.clone();
                 self.messages.push(message);
                 self.replies_count += 1;
                 self.version = version;

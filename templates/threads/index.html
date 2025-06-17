@@ -25,10 +25,15 @@
                 <ul>
                     {% for thread in threads %}
                     <li>
-                        <div>
-                            <a href="/threads/{{ thread.id }}"><code>{{ thread.id }}</code></a>
-                            <time datetime="{{ thread.created_at }}">{{ thread.created_at }}</time>
-                        </div>
+                        <dl>
+                            <dt>id:</dt>
+                            <dd><a href="/threads/{{ thread.id }}"><code>{{ thread.id }}</code></a></dd>
+                            <dt>created at:</dt>
+                            <dd><time datetime="{{ thread.created_at }}">{{ thread.created_at }}</time></dd>
+                            <dt>updated at:</dt>
+                            <dd><time datetime="{{ thread.last_message.created_at }}">{{ thread.last_message.created_at
+                                    }}</time></dd>
+                        </dl>
                         <div>
                             <span>{{ thread.messages[0].content }}</span>
                             <span>({{ thread.replies_count }})</span>
