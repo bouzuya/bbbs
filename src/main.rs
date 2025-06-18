@@ -2,6 +2,7 @@ mod app_state;
 mod handler;
 mod model;
 mod port;
+mod store;
 mod utils;
 
 use crate::app_state::AppState;
