@@ -38,10 +38,14 @@
 
             <section class="new-message">
                 <form action="/threads/{{ thread.id }}/messages" method="post">
-                    <input autofocus="autofocus" name="content" placeholder="please enter a message" required="required"
-                        type="text" />
-                    <input type="hidden" name="version" value="{{ thread.version }}" />
-                    <button type="submit">reply</button>
+                    <div>
+                        <textarea autofocus="autofocus" name="content" placeholder="please enter a message"
+                            required="required"></textarea>
+                        <input type="hidden" name="version" value="{{ thread.version }}" />
+                    </div>
+                    <div>
+                        <button type="submit">reply</button>
+                    </div>
                 </form>
             </section>
         </main>
