@@ -65,14 +65,15 @@ impl Thread {
                 thread_id: _,
                 version,
             }) => {
+                let message_count = self.replies_count + 1;
                 let message = Message {
                     content,
                     created_at: at,
-                    number: self.replies_count + 1,
+                    number: message_count + 1,
                 };
                 self.last_message = message.clone();
                 self.messages.push(message);
-                self.replies_count += 1;
+                self.replies_count = message_count;
                 self.version = version;
             }
         }
