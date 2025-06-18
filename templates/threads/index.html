@@ -22,25 +22,34 @@
         <main class="page-body">
             <section class="thread-list">
                 <h1>threads</h1>
-                <ul>
-                    {% for thread in threads %}
-                    <li>
-                        <dl>
-                            <dt>id:</dt>
-                            <dd><a href="/threads/{{ thread.id }}"><code>{{ thread.id }}</code></a></dd>
-                            <dt>created at:</dt>
-                            <dd><time datetime="{{ thread.created_at }}">{{ thread.created_at }}</time></dd>
-                            <dt>updated at:</dt>
-                            <dd><time datetime="{{ thread.last_message.created_at }}">{{ thread.last_message.created_at
-                                    }}</time></dd>
-                        </dl>
-                        <div>
-                            <span>{{ thread.messages[0].content }}</span>
-                            <span>({{ thread.replies_count }})</span>
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
+                {% if !threads.is_empty() %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>id</th>
+                            <th>created at</th>
+                            <th>updated at</th>
+                            <th>content</th>
+                            <th>replies count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for thread in threads %}
+                        <tr>
+                            <td><a href="/threads/{{ thread.id }}"><code>{{ thread.id }}</code></a></td>
+                            <td><time datetime="{{ thread.created_at }}">{{ thread.created_at }}</time></td>
+                            <td><time datetime="{{ thread.last_message.created_at }}">{{
+                                    thread.last_message.created_at
+                                    }}</time></td>
+                            <td>{{ thread.messages[0].content }}</td>
+                            <td>({{ thread.replies_count }})</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>There are no threads.</p>
+                {% endif %}
             </section>
 
             <section class="new-thread">
