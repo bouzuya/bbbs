@@ -27,22 +27,26 @@
                     <thead>
                         <tr>
                             <th>id</th>
-                            <th>created at</th>
-                            <th>updated at</th>
-                            <th>content</th>
-                            <th>replies count</th>
+                            <th>first message</th>
+                            <th>last message</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for thread in threads %}
                         <tr>
                             <td><a href="/threads/{{ thread.id }}"><code>{{ thread.id }}</code></a></td>
-                            <td><time datetime="{{ thread.created_at }}">{{ thread.created_at }}</time></td>
-                            <td><time datetime="{{ thread.last_message.created_at }}">{{
-                                    thread.last_message.created_at
-                                    }}</time></td>
-                            <td>{{ thread.messages[0].content }}</td>
-                            <td>({{ thread.replies_count }})</td>
+                            <td>
+                                <div>{{ thread.messages[0].number }}: <time datetime="{{ thread.created_at }}">{{
+                                        thread.created_at }}</time></div>
+                                <div>{{ thread.messages[0].content }}</div>
+                            </td>
+                            <td>
+                                <div>{{ thread.last_message.number }}: <time
+                                        datetime="{{ thread.last_message.created_at }}">{{
+                                        thread.last_message.created_at
+                                        }}</time></div>
+                                <div>{{ thread.last_message.content }}</div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
