@@ -27,10 +27,15 @@
                 <ul>
                     {% for message in thread.messages %}
                     <li>
-                        {{ message.number }}:
-                        {{ message.content }}
-                        <time datetime="{{ message.created_at }}">{{
-                            message.created_at }}</time>
+                        <div>
+                            {{ message.number }}:
+                            <time datetime="{{ message.created_at }}">{{
+                                message.created_at }}</time>
+                        </div>
+                        <div>
+                            <pre>{{ message.content }}</pre>
+                        </div>
+
                     </li>
                     {% endfor %}
                 </ul>
