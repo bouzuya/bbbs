@@ -1,10 +1,11 @@
+#[async_trait::async_trait]
 pub trait ThreadReader {
-    fn get_thread(
+    async fn get_thread(
         &self,
         id: &crate::model::shared::id::ThreadId,
     ) -> Option<crate::model::read::Thread>;
 
-    fn list_threads(&self) -> Vec<crate::model::read::Thread>;
+    async fn list_threads(&self) -> Vec<crate::model::read::Thread>;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -22,13 +23,14 @@ pub enum ThreadRepositoryError {
     },
 }
 
+#[async_trait::async_trait]
 pub trait ThreadRepository {
-    fn find(
+    async fn find(
         &self,
         id: &crate::model::shared::id::ThreadId,
     ) -> Result<Option<crate::model::write::Thread>, ThreadRepositoryError>;
 
-    fn store(
+    async fn store(
         &self,
         version: Option<crate::model::write::Version>,
         events: &[crate::model::shared::event::ThreadEvent],

@@ -70,7 +70,9 @@ pub async fn handler<S: ThreadRepository>(
     let message = crate::model::write::Message::create(content);
 
     let (thread, events) = Thread::create(message.clone()).map_err(MessageCreateError::Create)?;
-    ThreadRepository::store(&state, None, &events).map_err(MessageCreateError::Store)?;
+    ThreadRepository::store(&state, None, &events)
+        .await
+        .map_err(MessageCreateError::Store)?;
 
     Ok(ThreadCreateResponseBody {
         id: thread.id().to_string(),

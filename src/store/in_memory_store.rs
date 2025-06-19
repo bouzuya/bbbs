@@ -23,8 +23,9 @@ impl InMemoryStore {
 
 impl crate::store::Store for InMemoryStore {}
 
+#[async_trait::async_trait]
 impl crate::port::ThreadReader for InMemoryStore {
-    fn get_thread(
+    async fn get_thread(
         &self,
         id: &crate::model::shared::id::ThreadId,
     ) -> Option<crate::model::read::Thread> {
@@ -32,14 +33,15 @@ impl crate::port::ThreadReader for InMemoryStore {
         store.read.get(id).cloned()
     }
 
-    fn list_threads(&self) -> Vec<crate::model::read::Thread> {
+    async fn list_threads(&self) -> Vec<crate::model::read::Thread> {
         let store = self.0.lock().unwrap();
         store.read.values().cloned().collect()
     }
 }
 
+#[async_trait::async_trait]
 impl crate::port::ThreadRepository for InMemoryStore {
-    fn find(
+    async fn find(
         &self,
         id: &crate::model::shared::id::ThreadId,
     ) -> Result<Option<crate::model::write::Thread>, crate::port::ThreadRepositoryError> {
@@ -50,7 +52,7 @@ impl crate::port::ThreadRepository for InMemoryStore {
             .map(|events| crate::model::write::Thread::replay(events)))
     }
 
-    fn store(
+    async fn store(
         &self,
         version: Option<crate::model::write::Version>,
         events: &[crate::model::shared::event::ThreadEvent],

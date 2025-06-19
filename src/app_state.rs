@@ -15,32 +15,34 @@ impl AppState {
     }
 }
 
+#[async_trait::async_trait]
 impl crate::port::ThreadRepository for AppState {
-    fn find(
+    async fn find(
         &self,
         id: &crate::model::shared::id::ThreadId,
     ) -> Result<Option<crate::model::write::Thread>, crate::port::ThreadRepositoryError> {
-        self.store.find(id)
+        self.store.find(id).await
     }
 
-    fn store(
+    async fn store(
         &self,
         version: Option<crate::model::write::Version>,
         events: &[crate::model::shared::event::ThreadEvent],
     ) -> Result<(), crate::port::ThreadRepositoryError> {
-        self.store.store(version, events)
+        self.store.store(version, events).await
     }
 }
 
+#[async_trait::async_trait]
 impl crate::port::ThreadReader for AppState {
-    fn get_thread(
+    async fn get_thread(
         &self,
         id: &crate::model::shared::id::ThreadId,
     ) -> Option<crate::model::read::Thread> {
-        self.store.get_thread(id)
+        self.store.get_thread(id).await
     }
 
-    fn list_threads(&self) -> Vec<crate::model::read::Thread> {
-        self.store.list_threads()
+    async fn list_threads(&self) -> Vec<crate::model::read::Thread> {
+        self.store.list_threads().await
     }
 }

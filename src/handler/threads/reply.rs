@@ -88,12 +88,15 @@ pub async fn handler<S: ThreadRepository>(
     let message = crate::model::write::Message::create(content);
 
     let thread = ThreadRepository::find(&state, &thread_id)
+        .await
         .map_err(ThreadReplyError::Find)?
         .ok_or_else(|| ThreadReplyError::NotFound(thread_id))?;
     let (_, events) = thread
         .reply(message.clone())
         .map_err(ThreadReplyError::Reply)?;
-    ThreadRepository::store(&state, Some(version), &events).map_err(ThreadReplyError::Store)?;
+    ThreadRepository::store(&state, Some(version), &events)
+        .await
+        .map_err(ThreadReplyError::Store)?;
 
     Ok(ThreadReplyResponseBody {
         id: thread.id().to_string(),

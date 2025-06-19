@@ -19,6 +19,6 @@ impl axum::response::IntoResponse for ThreadListResponse {
 
 pub async fn handler<S: ThreadReader>(State(state): State<S>) -> ThreadListResponse {
     ThreadListResponse {
-        threads: state.list_threads(),
+        threads: state.list_threads().await,
     }
 }

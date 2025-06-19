@@ -44,6 +44,7 @@ pub async fn handler<S: ThreadReader>(
         crate::model::shared::id::ThreadId::from_str(&id).map_err(ThreadGetError::InvalidId)?;
     state
         .get_thread(&id)
+        .await
         .map(|thread| ThreadGetResponse { thread })
         .ok_or_else(|| ThreadGetError::NotFound)
 }

@@ -28,8 +28,9 @@ mod tests {
     #[derive(Clone)]
     struct AppState(Vec<crate::model::read::Thread>);
 
+    #[async_trait::async_trait]
     impl crate::port::ThreadReader for AppState {
-        fn get_thread(
+        async fn get_thread(
             &self,
             id: &crate::model::shared::id::ThreadId,
         ) -> Option<crate::model::read::Thread> {
@@ -37,13 +38,14 @@ mod tests {
             self.0.iter().find(|it| &it.id == &s).cloned()
         }
 
-        fn list_threads(&self) -> Vec<crate::model::read::Thread> {
+        async fn list_threads(&self) -> Vec<crate::model::read::Thread> {
             self.0.clone()
         }
     }
 
+    #[async_trait::async_trait]
     impl crate::port::ThreadRepository for AppState {
-        fn find(
+        async fn find(
             &self,
             _id: &crate::model::shared::id::ThreadId,
         ) -> Result<Option<crate::model::write::Thread>, crate::port::ThreadRepositoryError>
@@ -55,7 +57,7 @@ mod tests {
             Ok(Some(thread))
         }
 
-        fn store(
+        async fn store(
             &self,
             _version: Option<crate::model::write::Version>,
             _events: &[crate::model::shared::event::ThreadEvent],
