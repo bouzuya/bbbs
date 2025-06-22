@@ -68,6 +68,15 @@ enum SqliteStoreError {
     StoreCommit(#[source] sqlx::Error),
     #[error("store insert event streams")]
     StoreInsertEventStreams(#[source] sqlx::Error),
+    #[error("store update event streams")]
+    StoreUpdateEventStreams(#[source] sqlx::Error),
+    #[error(
+        "store update event streams conflict (expected version: {expected_version:?}, thread id: {thread_id})"
+    )]
+    StoreUpdateEventStreamsConflict {
+        expected_version: crate::model::write::Version,
+        thread_id: crate::model::shared::id::ThreadId,
+    },
     #[error("store insert events")]
     StoreInsertEvents(#[source] sqlx::Error),
 }
@@ -167,8 +176,21 @@ impl crate::port::ThreadRepository for SqliteStore {
                     .await
                     .map_err(SqliteStoreError::StoreInsertEventStreams)?;
             }
-            Some(_version) => {
-                todo!()
+            Some(version) => {
+                let result =
+                    sqlx::query(include_str!("sqlite_store/update_thread_event_streams.sql"))
+                        .bind(u32::from(last_event_version))
+                        .bind(thread_id.to_string())
+                        .bind(u32::from(version))
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(SqliteStoreError::StoreUpdateEventStreams)?;
+                if result.rows_affected() == 0 {
+                    return Err(SqliteStoreError::StoreUpdateEventStreamsConflict {
+                        expected_version: version,
+                        thread_id,
+                    })?;
+                }
             }
         }
 
@@ -228,7 +250,17 @@ mod tests {
         store.store(None, &created_events).await?;
 
         let found = store.find(created.id()).await?;
-        assert_eq!(found.map(|it| it.id().clone()), Some(created.id().clone()));
+        assert_eq!(found, Some(created.clone()));
+
+        let (replied, replied_events) =
+            created.reply(crate::model::write::Message::new_for_testing())?;
+        store
+            .store(Some(created.version()), &replied_events)
+            .await?;
+
+        let found = store.find(replied.id()).await?;
+        assert_eq!(found, Some(replied));
+
         Ok(())
     }
 }

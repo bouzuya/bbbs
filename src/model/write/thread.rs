@@ -14,6 +14,7 @@ use crate::utils::date_time::DateTime;
 #[error("thread error")]
 pub struct ThreadError(#[source] Box<dyn std::error::Error + Send + Sync>);
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Thread {
     id: ThreadId,
     message_count: usize,
