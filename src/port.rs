@@ -1,11 +1,15 @@
+#[derive(Debug, thiserror::Error)]
+#[error("thread reader error")]
+pub struct ThreadReaderError(#[source] Box<dyn std::error::Error + Send + Sync>);
+
 #[async_trait::async_trait]
 pub trait ThreadReader {
     async fn get_thread(
         &self,
         id: &crate::model::shared::id::ThreadId,
-    ) -> Option<crate::model::read::Thread>;
+    ) -> Result<Option<crate::model::read::Thread>, ThreadReaderError>;
 
-    async fn list_threads(&self) -> Vec<crate::model::read::Thread>;
+    async fn list_threads(&self) -> Result<Vec<crate::model::read::Thread>, ThreadReaderError>;
 }
 
 #[derive(Debug, thiserror::Error)]

@@ -28,14 +28,16 @@ impl crate::port::ThreadReader for InMemoryStore {
     async fn get_thread(
         &self,
         id: &crate::model::shared::id::ThreadId,
-    ) -> Option<crate::model::read::Thread> {
+    ) -> Result<Option<crate::model::read::Thread>, crate::port::ThreadReaderError> {
         let store = self.0.lock().unwrap();
-        store.read.get(id).cloned()
+        Ok(store.read.get(id).cloned())
     }
 
-    async fn list_threads(&self) -> Vec<crate::model::read::Thread> {
+    async fn list_threads(
+        &self,
+    ) -> Result<Vec<crate::model::read::Thread>, crate::port::ThreadReaderError> {
         let store = self.0.lock().unwrap();
-        store.read.values().cloned().collect()
+        Ok(store.read.values().cloned().collect())
     }
 }
 

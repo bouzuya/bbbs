@@ -33,13 +33,15 @@ mod tests {
         async fn get_thread(
             &self,
             id: &crate::model::shared::id::ThreadId,
-        ) -> Option<crate::model::read::Thread> {
+        ) -> Result<Option<crate::model::read::Thread>, crate::port::ThreadReaderError> {
             let s = id.to_string();
-            self.0.iter().find(|it| &it.id == &s).cloned()
+            Ok(self.0.iter().find(|it| &it.id == &s).cloned())
         }
 
-        async fn list_threads(&self) -> Vec<crate::model::read::Thread> {
-            self.0.clone()
+        async fn list_threads(
+            &self,
+        ) -> Result<Vec<crate::model::read::Thread>, crate::port::ThreadReaderError> {
+            Ok(self.0.clone())
         }
     }
 

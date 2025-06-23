@@ -21,6 +21,8 @@ impl axum::response::IntoResponse for ThreadGetResponse {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ThreadGetError {
+    #[error("get thread")]
+    GetThread(#[source] crate::port::ThreadReaderError),
     #[error("invalid thread id")]
     InvalidId(#[from] crate::model::shared::id::ThreadIdError),
     #[error("not found")]
@@ -30,6 +32,9 @@ pub enum ThreadGetError {
 impl axum::response::IntoResponse for ThreadGetError {
     fn into_response(self) -> axum::response::Response {
         match self {
+            ThreadGetError::GetThread(_) => {
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
             ThreadGetError::InvalidId(_) => axum::http::StatusCode::BAD_REQUEST.into_response(),
             ThreadGetError::NotFound => axum::http::StatusCode::NOT_FOUND.into_response(),
         }
@@ -45,6 +50,7 @@ pub async fn handler<S: ThreadReader>(
     state
         .get_thread(&id)
         .await
+        .map_err(ThreadGetError::GetThread)?
         .map(|thread| ThreadGetResponse { thread })
         .ok_or_else(|| ThreadGetError::NotFound)
 }

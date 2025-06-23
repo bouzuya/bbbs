@@ -38,11 +38,13 @@ impl crate::port::ThreadReader for AppState {
     async fn get_thread(
         &self,
         id: &crate::model::shared::id::ThreadId,
-    ) -> Option<crate::model::read::Thread> {
+    ) -> Result<Option<crate::model::read::Thread>, crate::port::ThreadReaderError> {
         self.store.get_thread(id).await
     }
 
-    async fn list_threads(&self) -> Vec<crate::model::read::Thread> {
+    async fn list_threads(
+        &self,
+    ) -> Result<Vec<crate::model::read::Thread>, crate::port::ThreadReaderError> {
         self.store.list_threads().await
     }
 }
