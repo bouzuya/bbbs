@@ -6,9 +6,11 @@ pub struct SqliteStore(sqlx::SqlitePool);
 impl SqliteStore {
     pub async fn new() -> Self {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .connect("sqlite:./db.sqlite?mode=rwc")
+            .connect("sqlite:./bbbs.sqlite?mode=rwc")
             .await
             .unwrap();
+
+        // write
         sqlx::query(
             r#"
 CREATE TABLE IF NOT EXISTS thread_event_streams (
@@ -34,6 +36,36 @@ CREATE TABLE IF NOT EXISTS thread_events (
         .execute(&pool)
         .await
         .unwrap();
+
+        // read
+        sqlx::query(
+            r#"
+CREATE TABLE IF NOT EXISTS threads (
+    created_at              TEXT    NOT NULL,
+    id                      TEXT    NOT NULL   PRIMARY KEY,
+    last_message_content    TEXT    NOT NULL,
+    last_message_created_at TEXT    NOT NULL,
+    last_message_number     TEXT    NOT NULL,
+    replies_count           INTEGER NOT NULL,
+    version                 INTEGER NOT NULL
+)"#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            r#"
+CREATE TABLE IF NOT EXISTS messages (
+    content     TEXT    NOT NULL,
+    created_at  TEXT    NOT NULL,
+    thread_id   TEXT    NOT NULL,
+    number      INTEGER NOT NULL,
+    PRIMARY KEY (thread_id, number)
+)"#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
         Self(pool)
     }
 }
@@ -44,13 +76,70 @@ impl crate::store::Store for SqliteStore {}
 impl crate::port::ThreadReader for SqliteStore {
     async fn get_thread(
         &self,
-        _id: &crate::model::shared::id::ThreadId,
-    ) -> Option<crate::model::read::Thread> {
-        todo!()
+        id: &crate::model::shared::id::ThreadId,
+    ) -> Result<Option<crate::model::read::Thread>, crate::port::ThreadReaderError> {
+        let mut tx = self
+            .0
+            .begin()
+            .await
+            .map_err(SqliteStoreError::GetThreadBeginTransaction)?;
+        let row = sqlx::query(include_str!("sqlite_store/select_threads.sql"))
+            .bind(id.to_string())
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(SqliteStoreError::GetThreadSelectThread)?;
+        let thread = match row {
+            None => None,
+            Some(row) => Some(crate::model::read::Thread {
+                id: row.get("id"),
+                created_at: row.get("created_at"),
+                last_message: crate::model::read::Message {
+                    content: row.get("last_message_content"),
+                    created_at: row.get("last_message_created_at"),
+                    number: row.get("last_message_number"),
+                },
+                messages: vec![],
+                replies_count: row.get("replies_count"),
+                version: row.get("version"),
+            }),
+        };
+        tx.rollback()
+            .await
+            .map_err(SqliteStoreError::GetThreadRollback)?;
+        Ok(thread)
     }
 
-    async fn list_threads(&self) -> Vec<crate::model::read::Thread> {
-        todo!()
+    async fn list_threads(
+        &self,
+    ) -> Result<Vec<crate::model::read::Thread>, crate::port::ThreadReaderError> {
+        let mut tx = self
+            .0
+            .begin()
+            .await
+            .map_err(SqliteStoreError::ListThreadsBeginTransaction)?;
+        let rows = sqlx::query(include_str!("sqlite_store/select_threads_all.sql"))
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(SqliteStoreError::ListThreadsSelectThread)?;
+        let threads = rows
+            .into_iter()
+            .map(|row| crate::model::read::Thread {
+                id: row.get("id"),
+                created_at: row.get("created_at"),
+                last_message: crate::model::read::Message {
+                    content: row.get("last_message_content"),
+                    created_at: row.get("last_message_created_at"),
+                    number: row.get("last_message_number"),
+                },
+                messages: vec![],
+                replies_count: row.get("replies_count"),
+                version: row.get("version"),
+            })
+            .collect::<Vec<crate::model::read::Thread>>();
+        tx.rollback()
+            .await
+            .map_err(SqliteStoreError::ListThreadsRollback)?;
+        Ok(threads)
     }
 }
 
@@ -62,6 +151,18 @@ enum SqliteStoreError {
     FindSelectEventStreams(#[source] sqlx::Error),
     #[error("find select events")]
     FindSelectEvents(#[source] sqlx::Error),
+    #[error("get thread begin transaction")]
+    GetThreadBeginTransaction(#[source] sqlx::Error),
+    #[error("get thread rollback")]
+    GetThreadRollback(#[source] sqlx::Error),
+    #[error("get thread select thread")]
+    GetThreadSelectThread(#[source] sqlx::Error),
+    #[error("list threads begin transaction")]
+    ListThreadsBeginTransaction(#[source] sqlx::Error),
+    #[error("list threads select thread")]
+    ListThreadsSelectThread(#[source] sqlx::Error),
+    #[error("list threads rollback")]
+    ListThreadsRollback(#[source] sqlx::Error),
     #[error("store begin transaction")]
     StoreBeginTransaction(#[source] sqlx::Error),
     #[error("store commit")]
@@ -81,6 +182,12 @@ enum SqliteStoreError {
     StoreInsertEvents(#[source] sqlx::Error),
 }
 
+impl From<SqliteStoreError> for crate::port::ThreadReaderError {
+    fn from(err: SqliteStoreError) -> Self {
+        Self(err.into())
+    }
+}
+
 impl From<SqliteStoreError> for crate::port::ThreadRepositoryError {
     fn from(err: SqliteStoreError) -> Self {
         // TODO
@@ -94,13 +201,9 @@ impl crate::port::ThreadRepository for SqliteStore {
         &self,
         id: &crate::model::shared::id::ThreadId,
     ) -> Result<Option<crate::model::write::Thread>, crate::port::ThreadRepositoryError> {
-        self.0
-            .begin()
-            .await
-            .map_err(SqliteStoreError::FindBeginTransaction)?;
         let mut tx = self
             .0
-            .acquire()
+            .begin()
             .await
             .map_err(SqliteStoreError::FindBeginTransaction)?;
         let row = sqlx::query(include_str!("sqlite_store/select_thread_event_streams.sql"))

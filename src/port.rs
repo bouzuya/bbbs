@@ -1,6 +1,6 @@
 #[derive(Debug, thiserror::Error)]
 #[error("thread reader error")]
-pub struct ThreadReaderError(#[source] Box<dyn std::error::Error + Send + Sync>);
+pub struct ThreadReaderError(#[source] pub Box<dyn std::error::Error + Send + Sync>);
 
 #[async_trait::async_trait]
 pub trait ThreadReader {
