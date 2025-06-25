@@ -98,6 +98,7 @@ impl crate::port::ThreadReader for SqliteStore {
                     created_at: row.get("last_message_created_at"),
                     number: row.get("last_message_number"),
                 },
+                // FIXME
                 messages: vec![],
                 replies_count: row.get("replies_count"),
                 version: row.get("version"),
@@ -131,6 +132,7 @@ impl crate::port::ThreadReader for SqliteStore {
                     created_at: row.get("last_message_created_at"),
                     number: row.get("last_message_number"),
                 },
+                // FIXME
                 messages: vec![],
                 replies_count: row.get("replies_count"),
                 version: row.get("version"),
@@ -178,6 +180,10 @@ enum SqliteStoreError {
         expected_version: crate::model::write::Version,
         thread_id: crate::model::shared::id::ThreadId,
     },
+    #[error("store update read model insert threads")]
+    StoreUpdateReadModelInsertThreads(#[source] sqlx::Error),
+    #[error("store update read model update threads")]
+    StoreUpdateReadModelUpdateThreads(#[source] sqlx::Error),
     #[error("store insert events")]
     StoreInsertEvents(#[source] sqlx::Error),
 }
@@ -326,6 +332,36 @@ impl crate::port::ThreadRepository for SqliteStore {
                 .execute(&mut *tx)
                 .await
                 .map_err(SqliteStoreError::StoreInsertEvents)?;
+        }
+
+        // Update read model
+        for event in events {
+            match event {
+                crate::model::shared::event::ThreadEvent::Created(event) => {
+                    sqlx::query(include_str!("sqlite_store/insert_threads.sql"))
+                        .bind(event.at.clone())
+                        .bind(event.thread_id.clone())
+                        .bind(event.content.clone())
+                        .bind(event.at.clone())
+                        .bind(1_i64)
+                        .bind(0_i64)
+                        .bind(event.version)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(SqliteStoreError::StoreUpdateReadModelInsertThreads)?;
+                }
+                crate::model::shared::event::ThreadEvent::Replied(event) => {
+                    sqlx::query(include_str!("sqlite_store/update_threads.sql"))
+                        .bind(event.content.clone())
+                        .bind(event.at.clone())
+                        .bind(event.version)
+                        .bind(event.thread_id.clone())
+                        .bind(event.version - 1)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(SqliteStoreError::StoreUpdateReadModelUpdateThreads)?;
+                }
+            }
         }
 
         tx.commit().await.map_err(SqliteStoreError::StoreCommit)?;
