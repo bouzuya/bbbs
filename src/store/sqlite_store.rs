@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS threads (
     id                      TEXT    NOT NULL   PRIMARY KEY,
     last_message_content    TEXT    NOT NULL,
     last_message_created_at TEXT    NOT NULL,
-    last_message_number     TEXT    NOT NULL,
+    last_message_number     INTEGER NOT NULL,
     replies_count           INTEGER NOT NULL,
     version                 INTEGER NOT NULL
 )"#,
