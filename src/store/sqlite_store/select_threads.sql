@@ -9,4 +9,4 @@ SELECT
 FROM
     threads
 WHERE
-    thread_id = ?
+    id = ?
