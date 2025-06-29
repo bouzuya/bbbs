@@ -96,11 +96,24 @@ impl crate::port::ThreadReader for SqliteStore {
                 last_message: crate::model::read::Message {
                     content: row.get("last_message_content"),
                     created_at: row.get("last_message_created_at"),
-                    number: row.get("last_message_number"),
+                    number: {
+                        let n: i64 = row.get("last_message_number");
+                        n as u16
+                    },
                 },
                 // FIXME
-                messages: vec![],
-                replies_count: row.get("replies_count"),
+                messages: vec![crate::model::read::Message {
+                    content: row.get("last_message_content"),
+                    created_at: row.get("last_message_created_at"),
+                    number: {
+                        let n: i64 = row.get("last_message_number");
+                        n as u16
+                    },
+                }],
+                replies_count: {
+                    let n: i64 = row.get("replies_count");
+                    n as u16
+                },
                 version: row.get("version"),
             }),
         };
