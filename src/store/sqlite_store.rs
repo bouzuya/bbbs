@@ -83,6 +83,19 @@ impl crate::port::ThreadReader for SqliteStore {
             .begin()
             .await
             .map_err(SqliteStoreError::GetThreadBeginTransaction)?;
+        let rows = sqlx::query(include_str!("sqlite_store/select_messages.sql"))
+            .bind(id.to_string())
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(SqliteStoreError::GetThreadSelectMessages)?;
+        let messages = rows
+            .into_iter()
+            .map(|row| crate::model::read::Message {
+                content: row.get("content"),
+                created_at: row.get("created_at"),
+                number: row.get::<i64, _>("number") as u16,
+            })
+            .collect::<Vec<crate::model::read::Message>>();
         let row = sqlx::query(include_str!("sqlite_store/select_threads.sql"))
             .bind(id.to_string())
             .fetch_optional(&mut *tx)
@@ -96,24 +109,10 @@ impl crate::port::ThreadReader for SqliteStore {
                 last_message: crate::model::read::Message {
                     content: row.get("last_message_content"),
                     created_at: row.get("last_message_created_at"),
-                    number: {
-                        let n: i64 = row.get("last_message_number");
-                        n as u16
-                    },
+                    number: row.get::<i64, _>("last_message_number") as u16,
                 },
-                // FIXME
-                messages: vec![crate::model::read::Message {
-                    content: row.get("last_message_content"),
-                    created_at: row.get("last_message_created_at"),
-                    number: {
-                        let n: i64 = row.get("last_message_number");
-                        n as u16
-                    },
-                }],
-                replies_count: {
-                    let n: i64 = row.get("replies_count");
-                    n as u16
-                },
+                messages,
+                replies_count: row.get::<i64, _>("replies_count") as u16,
                 version: row.get("version"),
             }),
         };
@@ -135,9 +134,23 @@ impl crate::port::ThreadReader for SqliteStore {
             .fetch_all(&mut *tx)
             .await
             .map_err(SqliteStoreError::ListThreadsSelectThread)?;
-        let threads = rows
-            .into_iter()
-            .map(|row| crate::model::read::Thread {
+        let mut threads = vec![];
+        for row in rows {
+            let id = row.get::<String, _>("id");
+            let rows = sqlx::query(include_str!("sqlite_store/select_messages.sql"))
+                .bind(&id)
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(SqliteStoreError::GetThreadSelectMessages)?;
+            let messages = rows
+                .into_iter()
+                .map(|row| crate::model::read::Message {
+                    content: row.get::<String, _>("content"),
+                    created_at: row.get::<String, _>("created_at"),
+                    number: row.get::<i64, _>("number") as u16,
+                })
+                .collect::<Vec<crate::model::read::Message>>();
+            let thread = crate::model::read::Thread {
                 id: row.get("id"),
                 created_at: row.get("created_at"),
                 last_message: crate::model::read::Message {
@@ -145,12 +158,12 @@ impl crate::port::ThreadReader for SqliteStore {
                     created_at: row.get("last_message_created_at"),
                     number: row.get("last_message_number"),
                 },
-                // FIXME
-                messages: vec![],
+                messages,
                 replies_count: row.get("replies_count"),
                 version: row.get("version"),
-            })
-            .collect::<Vec<crate::model::read::Thread>>();
+            };
+            threads.push(thread);
+        }
         tx.rollback()
             .await
             .map_err(SqliteStoreError::ListThreadsRollback)?;
@@ -170,6 +183,8 @@ enum SqliteStoreError {
     GetThreadBeginTransaction(#[source] sqlx::Error),
     #[error("get thread rollback")]
     GetThreadRollback(#[source] sqlx::Error),
+    #[error("get thread select messages")]
+    GetThreadSelectMessages(#[source] sqlx::Error),
     #[error("get thread select thread")]
     GetThreadSelectThread(#[source] sqlx::Error),
     #[error("list threads begin transaction")]
@@ -193,6 +208,8 @@ enum SqliteStoreError {
         expected_version: crate::model::write::Version,
         thread_id: crate::model::shared::id::ThreadId,
     },
+    #[error("store update read model insert messages")]
+    StoreUpdateReadModelInsertMessages(#[source] sqlx::Error),
     #[error("store update read model insert threads")]
     StoreUpdateReadModelInsertThreads(#[source] sqlx::Error),
     #[error("store update read model update threads")]
@@ -362,6 +379,15 @@ impl crate::port::ThreadRepository for SqliteStore {
                         .execute(&mut *tx)
                         .await
                         .map_err(SqliteStoreError::StoreUpdateReadModelInsertThreads)?;
+
+                    sqlx::query(include_str!("sqlite_store/insert_messages.sql"))
+                        .bind(event.content.clone())
+                        .bind(event.at.clone())
+                        .bind(event.thread_id.clone())
+                        .bind(1_i64)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(SqliteStoreError::StoreUpdateReadModelInsertMessages)?;
                 }
                 crate::model::shared::event::ThreadEvent::Replied(event) => {
                     sqlx::query(include_str!("sqlite_store/update_threads.sql"))
@@ -373,6 +399,15 @@ impl crate::port::ThreadRepository for SqliteStore {
                         .execute(&mut *tx)
                         .await
                         .map_err(SqliteStoreError::StoreUpdateReadModelUpdateThreads)?;
+
+                    sqlx::query(include_str!("sqlite_store/insert_messages.sql"))
+                        .bind(event.content.clone())
+                        .bind(event.at.clone())
+                        .bind(event.thread_id.clone())
+                        .bind(event.version)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(SqliteStoreError::StoreUpdateReadModelInsertMessages)?;
                 }
             }
         }
