@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
-use crate::store::{InMemoryStore, Store};
+#[cfg(not(feature = "sqlite"))]
+use crate::store::InMemoryStore;
+#[cfg(feature = "sqlite")]
+use crate::store::SqliteStore;
+use crate::store::Store;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -8,7 +12,15 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new() -> Self {
+    #[cfg(feature = "sqlite")]
+    pub async fn new() -> Self {
+        AppState {
+            store: Arc::new(SqliteStore::new().await),
+        }
+    }
+
+    #[cfg(not(feature = "sqlite"))]
+    pub async fn new() -> Self {
         AppState {
             store: Arc::new(InMemoryStore::new()),
         }

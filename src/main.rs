@@ -24,7 +24,7 @@ async fn main() {
     let cli = <Cli as clap::Parser>::parse();
     let port = cli.port.unwrap_or(3000);
 
-    let router = handler::router().with_state(AppState::new()).layer(
+    let router = handler::router().with_state(AppState::new().await).layer(
         tower_http::trace::TraceLayer::new_for_http().make_span_with(
             |request: &axum::http::Request<axum::body::Body>| {
                 let matched_path = request
