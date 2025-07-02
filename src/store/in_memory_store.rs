@@ -3,6 +3,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::model::read::ThreadWithoutMessages;
+
 struct InMemoryStoreInner {
     read: BTreeMap<crate::model::shared::id::ThreadId, crate::model::read::Thread>,
     write:
@@ -35,9 +37,15 @@ impl crate::port::ThreadReader for InMemoryStore {
 
     async fn list_threads(
         &self,
-    ) -> Result<Vec<crate::model::read::Thread>, crate::port::ThreadReaderError> {
+    ) -> Result<Vec<crate::model::read::ThreadWithoutMessages>, crate::port::ThreadReaderError>
+    {
         let store = self.0.lock().unwrap();
-        Ok(store.read.values().cloned().collect())
+        Ok(store
+            .read
+            .values()
+            .cloned()
+            .map(ThreadWithoutMessages::from)
+            .collect())
     }
 }
 

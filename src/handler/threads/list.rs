@@ -6,7 +6,7 @@ use crate::port::ThreadReader;
 #[derive(askama::Template)]
 #[template(path = "threads/index.html")]
 pub struct ThreadListResponse {
-    pub threads: Vec<crate::model::read::Thread>,
+    pub threads: Vec<crate::model::read::ThreadWithoutMessages>,
 }
 
 impl AskamaTemplateExt for ThreadListResponse {}

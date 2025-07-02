@@ -124,7 +124,8 @@ impl crate::port::ThreadReader for SqliteStore {
 
     async fn list_threads(
         &self,
-    ) -> Result<Vec<crate::model::read::Thread>, crate::port::ThreadReaderError> {
+    ) -> Result<Vec<crate::model::read::ThreadWithoutMessages>, crate::port::ThreadReaderError>
+    {
         let mut tx = self
             .0
             .begin()
@@ -136,21 +137,7 @@ impl crate::port::ThreadReader for SqliteStore {
             .map_err(SqliteStoreError::ListThreadsSelectThread)?;
         let mut threads = vec![];
         for row in rows {
-            let id = row.get::<String, _>("id");
-            let rows = sqlx::query(include_str!("sqlite_store/select_messages.sql"))
-                .bind(&id)
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(SqliteStoreError::GetThreadSelectMessages)?;
-            let messages = rows
-                .into_iter()
-                .map(|row| crate::model::read::Message {
-                    content: row.get::<String, _>("content"),
-                    created_at: row.get::<String, _>("created_at"),
-                    number: row.get::<i64, _>("number") as u16,
-                })
-                .collect::<Vec<crate::model::read::Message>>();
-            let thread = crate::model::read::Thread {
+            let thread = crate::model::read::ThreadWithoutMessages {
                 id: row.get("id"),
                 created_at: row.get("created_at"),
                 last_message: crate::model::read::Message {
@@ -158,7 +145,6 @@ impl crate::port::ThreadReader for SqliteStore {
                     created_at: row.get("last_message_created_at"),
                     number: row.get("last_message_number"),
                 },
-                messages,
                 replies_count: row.get("replies_count"),
                 version: row.get("version"),
             };

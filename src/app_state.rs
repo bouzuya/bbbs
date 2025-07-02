@@ -56,7 +56,8 @@ impl crate::port::ThreadReader for AppState {
 
     async fn list_threads(
         &self,
-    ) -> Result<Vec<crate::model::read::Thread>, crate::port::ThreadReaderError> {
+    ) -> Result<Vec<crate::model::read::ThreadWithoutMessages>, crate::port::ThreadReaderError>
+    {
         self.store.list_threads().await
     }
 }

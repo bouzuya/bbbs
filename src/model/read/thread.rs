@@ -4,6 +4,36 @@ use crate::model::{
 };
 
 #[derive(Clone)]
+pub struct ThreadWithoutMessages {
+    pub created_at: String,
+    pub id: String,
+    pub last_message: Message,
+    pub replies_count: u16,
+    pub version: u32,
+}
+
+impl From<Thread> for ThreadWithoutMessages {
+    fn from(
+        Thread {
+            created_at,
+            id,
+            last_message,
+            messages: _,
+            replies_count,
+            version,
+        }: Thread,
+    ) -> Self {
+        Self {
+            created_at,
+            id,
+            last_message,
+            replies_count,
+            version,
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct Thread {
     pub created_at: String,
     pub id: String,

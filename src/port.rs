@@ -9,7 +9,9 @@ pub trait ThreadReader {
         id: &crate::model::shared::id::ThreadId,
     ) -> Result<Option<crate::model::read::Thread>, ThreadReaderError>;
 
-    async fn list_threads(&self) -> Result<Vec<crate::model::read::Thread>, ThreadReaderError>;
+    async fn list_threads(
+        &self,
+    ) -> Result<Vec<crate::model::read::ThreadWithoutMessages>, ThreadReaderError>;
 }
 
 #[derive(Debug, thiserror::Error)]

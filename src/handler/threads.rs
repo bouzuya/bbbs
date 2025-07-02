@@ -22,6 +22,7 @@ pub fn router<
 mod tests {
     use crate::handler::tests::ResponseExt;
     use crate::handler::tests::send_request;
+    use crate::model::read::ThreadWithoutMessages;
 
     use super::*;
 
@@ -40,8 +41,14 @@ mod tests {
 
         async fn list_threads(
             &self,
-        ) -> Result<Vec<crate::model::read::Thread>, crate::port::ThreadReaderError> {
-            Ok(self.0.clone())
+        ) -> Result<Vec<crate::model::read::ThreadWithoutMessages>, crate::port::ThreadReaderError>
+        {
+            Ok(self
+                .0
+                .clone()
+                .into_iter()
+                .map(ThreadWithoutMessages::from)
+                .collect())
         }
     }
 
