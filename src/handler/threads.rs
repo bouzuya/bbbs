@@ -160,6 +160,11 @@ mod tests {
         AppState(vec![
             Thread {
                 created_at: "2020-01-02T03:04:05Z".to_owned(),
+                first_message: crate::model::read::Message {
+                    content: "New thread content".to_owned(),
+                    created_at: "2020-01-02T03:04:05Z".to_owned(),
+                    number: 1,
+                },
                 id: "9b018a80-edcf-4a7b-89be-cc807bc2e647".to_owned(),
                 last_message: crate::model::read::Message {
                     content: "Reply content".to_owned(),
@@ -183,6 +188,11 @@ mod tests {
             },
             Thread {
                 created_at: "2020-01-02T05:06:07Z".to_owned(),
+                first_message: crate::model::read::Message {
+                    content: "Test Thread 2".to_owned(),
+                    created_at: "2020-01-02T05:06:07Z".to_owned(),
+                    number: 1,
+                },
                 id: "a2d3f8e9-4c5b-6d7e-8f9a-0b1c2d3e4f5g".to_owned(),
                 last_message: crate::model::read::Message {
                     content: "Test Thread 2".to_owned(),

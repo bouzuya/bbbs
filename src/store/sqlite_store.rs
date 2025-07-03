@@ -41,13 +41,16 @@ CREATE TABLE IF NOT EXISTS thread_events (
         sqlx::query(
             r#"
 CREATE TABLE IF NOT EXISTS threads (
-    created_at              TEXT    NOT NULL,
-    id                      TEXT    NOT NULL   PRIMARY KEY,
-    last_message_content    TEXT    NOT NULL,
-    last_message_created_at TEXT    NOT NULL,
-    last_message_number     INTEGER NOT NULL,
-    replies_count           INTEGER NOT NULL,
-    version                 INTEGER NOT NULL
+    created_at                  TEXT    NOT NULL,
+    first_message_content       TEXT    NOT NULL,
+    first_message_created_at    TEXT    NOT NULL,
+    first_message_number        INTEGER NOT NULL,
+    id                          TEXT    NOT NULL   PRIMARY KEY,
+    last_message_content        TEXT    NOT NULL,
+    last_message_created_at     TEXT    NOT NULL,
+    last_message_number         INTEGER NOT NULL,
+    replies_count               INTEGER NOT NULL,
+    version                     INTEGER NOT NULL
 )"#,
         )
         .execute(&pool)
@@ -104,8 +107,13 @@ impl crate::port::ThreadReader for SqliteStore {
         let thread = match row {
             None => None,
             Some(row) => Some(crate::model::read::Thread {
-                id: row.get("id"),
                 created_at: row.get("created_at"),
+                first_message: crate::model::read::Message {
+                    content: row.get("first_message_content"),
+                    created_at: row.get("first_message_created_at"),
+                    number: row.get::<i64, _>("first_message_number") as u16,
+                },
+                id: row.get("id"),
                 last_message: crate::model::read::Message {
                     content: row.get("last_message_content"),
                     created_at: row.get("last_message_created_at"),
@@ -138,8 +146,13 @@ impl crate::port::ThreadReader for SqliteStore {
         let mut threads = vec![];
         for row in rows {
             let thread = crate::model::read::ThreadWithoutMessages {
-                id: row.get("id"),
                 created_at: row.get("created_at"),
+                first_message: crate::model::read::Message {
+                    content: row.get("first_message_content"),
+                    created_at: row.get("first_message_created_at"),
+                    number: row.get::<i64, _>("first_message_number") as u16,
+                },
+                id: row.get("id"),
                 last_message: crate::model::read::Message {
                     content: row.get("last_message_content"),
                     created_at: row.get("last_message_created_at"),
@@ -356,6 +369,9 @@ impl crate::port::ThreadRepository for SqliteStore {
                 crate::model::shared::event::ThreadEvent::Created(event) => {
                     sqlx::query(include_str!("sqlite_store/insert_threads.sql"))
                         .bind(event.at.clone())
+                        .bind(event.content.clone())
+                        .bind(event.at.clone())
+                        .bind(1_i64)
                         .bind(event.thread_id.clone())
                         .bind(event.content.clone())
                         .bind(event.at.clone())

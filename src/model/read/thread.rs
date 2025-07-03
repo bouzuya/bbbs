@@ -6,6 +6,7 @@ use crate::model::{
 #[derive(Clone)]
 pub struct ThreadWithoutMessages {
     pub created_at: String,
+    pub first_message: Message,
     pub id: String,
     pub last_message: Message,
     pub replies_count: u16,
@@ -16,6 +17,7 @@ impl From<Thread> for ThreadWithoutMessages {
     fn from(
         Thread {
             created_at,
+            first_message,
             id,
             last_message,
             messages: _,
@@ -25,6 +27,7 @@ impl From<Thread> for ThreadWithoutMessages {
     ) -> Self {
         Self {
             created_at,
+            first_message,
             id,
             last_message,
             replies_count,
@@ -36,6 +39,7 @@ impl From<Thread> for ThreadWithoutMessages {
 #[derive(Clone)]
 pub struct Thread {
     pub created_at: String,
+    pub first_message: Message,
     pub id: String,
     pub last_message: Message,
     pub messages: Vec<Message>,
@@ -57,6 +61,11 @@ impl Thread {
                 version,
             }) => Self {
                 created_at: at.clone(),
+                first_message: Message {
+                    content: content.clone(),
+                    created_at: at.clone(),
+                    number: 1,
+                },
                 id: thread_id.clone(),
                 last_message: Message {
                     content: content.clone(),

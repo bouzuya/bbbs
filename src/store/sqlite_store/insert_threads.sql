@@ -1,5 +1,8 @@
 INSERT INTO threads (
       created_at
+    , first_message_content
+    , first_message_created_at
+    , first_message_number
     , id
     , last_message_content
     , last_message_created_at
@@ -7,6 +10,9 @@ INSERT INTO threads (
     , replies_count
     , version
 ) VALUES (
+    ?,
+    ?,
+    ?,
     ?,
     ?,
     ?,
