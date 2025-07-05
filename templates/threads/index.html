@@ -27,6 +27,7 @@
                     <thead>
                         <tr>
                             <th>id</th>
+                            <th>first message</th>
                             <th>last message</th>
                         </tr>
                     </thead>
@@ -34,6 +35,13 @@
                         {% for thread in threads %}
                         <tr>
                             <td><a href="/threads/{{ thread.id }}"><code>{{ thread.id }}</code></a></td>
+                            <td>
+                                <div>{{ thread.first_message.number }}: <time
+                                        datetime="{{ thread.first_message.created_at }}">{{
+                                        thread.first_message.created_at
+                                        }}</time></div>
+                                <div>{{ thread.first_message.content }}</div>
+                            </td>
                             <td>
                                 <div>{{ thread.last_message.number }}: <time
                                         datetime="{{ thread.last_message.created_at }}">{{
