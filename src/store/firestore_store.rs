@@ -1,3 +1,4 @@
+mod firestore_client;
 // TODO
 pub struct FirestoreStore;
 
