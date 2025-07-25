@@ -85,9 +85,10 @@ impl FirestoreClient {
         &self.database_name
     }
 
-    pub fn collection(&self, collection_path: &str) -> CollectionReference {
+    /// TODO: support collection_path
+    pub fn collection(&self, collection_id: &str) -> CollectionReference {
         CollectionReference {
-            collection_name: self.database_name().collection(collection_path).unwrap(),
+            collection_name: self.database_name().collection(collection_id).unwrap(),
             firestore_client: self.clone(),
         }
     }
@@ -176,6 +177,7 @@ mod tests {
         let document_refs = collection_ref.list_documents().await?;
         for document_ref in document_refs {
             println!("Document ID: {}", document_ref.id());
+            assert_eq!(document_ref.parent().path(), collection_ref.path());
         }
         Ok(())
     }
