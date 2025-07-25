@@ -86,11 +86,15 @@ impl FirestoreClient {
     }
 
     /// TODO: support collection_path
-    pub fn collection(&self, collection_id: &str) -> CollectionReference {
-        CollectionReference {
-            collection_name: self.database_name().collection(collection_id).unwrap(),
+    pub fn collection(&self, collection_id: &str) -> Result<CollectionReference, Error> {
+        Ok(CollectionReference {
+            collection_name: self
+                .database_name()
+                .collection(collection_id)
+                .map_err(Into::into)
+                .map_err(Error)?,
             firestore_client: self.clone(),
-        }
+        })
     }
 }
 
@@ -101,11 +105,15 @@ struct CollectionReference {
 
 impl CollectionReference {
     /// TODO: support document_path
-    pub fn doc(&self, document_id: &str) -> DocumentReference {
-        DocumentReference {
-            document_name: self.collection_name.doc(document_id).unwrap(),
+    pub fn doc(&self, document_id: &str) -> Result<DocumentReference, Error> {
+        Ok(DocumentReference {
+            document_name: self
+                .collection_name
+                .doc(document_id)
+                .map_err(Into::into)
+                .map_err(Error)?,
             firestore_client: self.firestore_client.clone(),
-        }
+        })
     }
 
     pub fn id(&self) -> String {
@@ -181,13 +189,13 @@ mod tests {
     #[tokio::test]
     async fn test() -> anyhow::Result<()> {
         let firestore = FirestoreClient::new().await?;
-        let collection_ref = firestore.collection("col");
+        let collection_ref = firestore.collection("col")?;
         let document_refs = collection_ref.list_documents().await?;
         for document_ref in document_refs {
             assert_eq!(document_ref.parent().path(), collection_ref.path());
             assert_eq!(
                 document_ref.path(),
-                collection_ref.doc(&document_ref.id()).path()
+                collection_ref.doc(&document_ref.id())?.path()
             );
         }
         Ok(())
