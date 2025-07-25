@@ -11,8 +11,39 @@ type Client =
     >;
 
 #[derive(Debug, thiserror::Error)]
+#[error(transparent)]
+pub struct Error(InnerError);
+
+impl From<InnerError> for Error {
+    fn from(inner: InnerError) -> Self {
+        Self(inner)
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
 #[error("error")]
-pub struct Error(#[source] Box<dyn std::error::Error + Send + Sync>);
+enum InnerError {
+    #[error("channel connect")]
+    ChannelConnect(#[source] tonic::transport::Error),
+    #[error("channel tls config")]
+    ChannelTlsConfig(#[source] tonic::transport::Error),
+    #[error("database name from project id")]
+    DatabaseNameFromProjectId(#[source] firestore_path::Error),
+    #[error("invalid collection id")]
+    InvalidCollectionId(#[source] firestore_path::Error),
+    #[error("invalid document id")]
+    InvalidDocumentId(#[source] firestore_path::Error),
+    #[error("list documents")]
+    ListDocuments(#[source] tonic::Status),
+    #[error("metadata value try from")]
+    MetadataValueTryFrom(#[source] tonic::metadata::errors::InvalidMetadataValue),
+    #[error("new token source provider")]
+    NewTokenSourceProvider(#[source] gcloud_auth::error::Error),
+    #[error("no project id")]
+    NoProjectId,
+    #[error("token source token")]
+    TokenSourceToken(#[source] Box<dyn std::error::Error + Send + Sync>),
+}
 
 #[derive(Clone)]
 pub struct FirestoreClient {
@@ -30,26 +61,20 @@ impl FirestoreClient {
             ]),
         )
         .await
-        .map_err(Into::into)
-        .map_err(Error)?;
+        .map_err(InnerError::NewTokenSourceProvider)?;
         let token_source =
             token_source::TokenSourceProvider::token_source(&default_token_source_provider);
         let project_id = default_token_source_provider
             .project_id
-            .ok_or("project_id not found")
-            .map_err(Into::into)
-            .map_err(Error)?;
+            .ok_or(InnerError::NoProjectId)?;
         let channel = tonic::transport::Channel::from_static("https://firestore.googleapis.com")
             .tls_config(tonic::transport::ClientTlsConfig::new().with_webpki_roots())
-            .map_err(Into::into)
-            .map_err(Error)?
+            .map_err(InnerError::ChannelTlsConfig)?
             .connect()
             .await
-            .map_err(Into::into)
-            .map_err(Error)?;
+            .map_err(InnerError::ChannelConnect)?;
         let database_name = DatabaseName::from_project_id(project_id)
-            .map_err(Into::into)
-            .map_err(Error)?;
+            .map_err(InnerError::DatabaseNameFromProjectId)?;
         Ok(Self {
             channel,
             database_name,
@@ -63,11 +88,9 @@ impl FirestoreClient {
             .token_source
             .token()
             .await
-            .map_err(Into::into)
-            .map_err(Error)?;
+            .map_err(InnerError::TokenSourceToken)?;
         let mut metadata_value = tonic::metadata::AsciiMetadataValue::try_from(token)
-            .map_err(Into::into)
-            .map_err(Error)?;
+            .map_err(InnerError::MetadataValueTryFrom)?;
         metadata_value.set_sensitive(true);
         let interceptor: MyInterceptor = Box::new(
             move |mut request: tonic::Request<()>| -> Result<tonic::Request<()>, tonic::Status> {
@@ -91,8 +114,7 @@ impl FirestoreClient {
             collection_name: self
                 .database_name()
                 .collection(collection_id)
-                .map_err(Into::into)
-                .map_err(Error)?,
+                .map_err(InnerError::InvalidCollectionId)?,
             firestore_client: self.clone(),
         })
     }
@@ -110,8 +132,7 @@ impl CollectionReference {
             document_name: self
                 .collection_name
                 .doc(document_id)
-                .map_err(Into::into)
-                .map_err(Error)?,
+                .map_err(InnerError::InvalidDocumentId)?,
             firestore_client: self.firestore_client.clone(),
         })
     }
@@ -133,8 +154,7 @@ impl CollectionReference {
                 ..Default::default()
             })
             .await
-            .map_err(Into::into)
-            .map_err(Error)?;
+            .map_err(InnerError::ListDocuments)?;
         Ok(response
             .into_inner()
             .documents
