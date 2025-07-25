@@ -100,6 +100,14 @@ struct CollectionReference {
 }
 
 impl CollectionReference {
+    /// TODO: support document_path
+    pub fn doc(&self, document_id: &str) -> DocumentReference {
+        DocumentReference {
+            document_name: self.collection_name.doc(document_id).unwrap(),
+            firestore_client: self.firestore_client.clone(),
+        }
+    }
+
     pub fn id(&self) -> String {
         self.collection_name.collection_id().to_string()
     }
@@ -171,13 +179,16 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_firestore_client_new() -> anyhow::Result<()> {
+    async fn test() -> anyhow::Result<()> {
         let firestore = FirestoreClient::new().await?;
         let collection_ref = firestore.collection("col");
         let document_refs = collection_ref.list_documents().await?;
         for document_ref in document_refs {
-            println!("Document ID: {}", document_ref.id());
             assert_eq!(document_ref.parent().path(), collection_ref.path());
+            assert_eq!(
+                document_ref.path(),
+                collection_ref.doc(&document_ref.id()).path()
+            );
         }
         Ok(())
     }
