@@ -35,6 +35,8 @@ enum InnerError {
     InvalidDocumentId(#[source] firestore_path::Error),
     #[error("list documents")]
     ListDocuments(#[source] tonic::Status),
+    #[error("list documents invalid document name")]
+    ListDocumentsInvalidDocumentName(#[source] firestore_path::Error),
     #[error("metadata value try from")]
     MetadataValueTryFrom(#[source] tonic::metadata::errors::InvalidMetadataValue),
     #[error("new token source provider")]
@@ -142,9 +144,12 @@ impl CollectionReference {
     }
 
     pub async fn list_documents(&self) -> Result<Vec<DocumentReference>, Error> {
-        // TODO: pagination
-        let mut firestore_client = self.firestore_client.client().await.unwrap();
-        let response = firestore_client
+        let mut firestore_client = self.firestore_client.client().await?;
+        let google::firestore::v1::ListDocumentsResponse {
+            documents,
+            // TODO: pagination
+            next_page_token: _,
+        } = firestore_client
             .list_documents(google::firestore::v1::ListDocumentsRequest {
                 parent: self.collection_name.parent().map_or_else(
                     || self.collection_name.root_document_name().to_string(),
@@ -154,16 +159,18 @@ impl CollectionReference {
                 ..Default::default()
             })
             .await
-            .map_err(InnerError::ListDocuments)?;
-        Ok(response
-            .into_inner()
-            .documents
+            .map_err(InnerError::ListDocuments)?
+            .into_inner();
+        documents
             .into_iter()
-            .map(|doc| DocumentReference {
-                document_name: DocumentName::from_str(&doc.name).unwrap(),
-                firestore_client: self.firestore_client.clone(),
+            .map(|doc| -> Result<DocumentReference, Error> {
+                Ok(DocumentReference {
+                    document_name: DocumentName::from_str(&doc.name)
+                        .map_err(InnerError::ListDocumentsInvalidDocumentName)?,
+                    firestore_client: self.firestore_client.clone(),
+                })
             })
-            .collect::<Vec<DocumentReference>>())
+            .collect::<Result<Vec<DocumentReference>, Error>>()
     }
 
     pub fn parent(&self) -> Option<DocumentReference> {
