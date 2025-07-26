@@ -365,9 +365,19 @@ impl DocumentReference {
 
 #[cfg(test)]
 mod tests {
+    use rand::{Rng, distr::SampleString};
+
     use super::*;
 
+    #[derive(Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+    struct DocumentData {
+        s: String,
+        n: i64,
+        b: bool,
+    }
+
     #[tokio::test]
+    #[serial_test::serial]
     async fn test() -> anyhow::Result<()> {
         let firestore = build_firestore().await?;
         let collection_ref = firestore.collection("col")?;
@@ -383,6 +393,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_firestore_collection() -> anyhow::Result<()> {
         let firestore = build_firestore().await?;
         let collection_ref = firestore.collection("col")?;
@@ -391,6 +402,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_collection_reference_doc() -> anyhow::Result<()> {
         let firestore = build_firestore().await?;
         let collection_ref = firestore.collection("col")?;
@@ -402,6 +414,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_collection_reference_id() -> anyhow::Result<()> {
         let firestore = build_firestore().await?;
         let collection_ref = firestore.collection("col")?;
@@ -411,10 +424,21 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_collection_reference_list_documents() -> anyhow::Result<()> {
         let firestore = build_firestore().await?;
-        // TODO: reset document
+        let document_data1 = build_document_data();
+        let document_data2 = build_document_data();
+
         let collection_ref = firestore.collection("col")?;
+
+        // reset collection
+        for document_ref in collection_ref.list_documents().await? {
+            document_ref.delete().await?;
+        }
+        collection_ref.doc("doc1")?.set(&document_data1).await?;
+        collection_ref.doc("doc2")?.set(&document_data2).await?;
+
         assert_eq!(
             collection_ref
                 .list_documents()
@@ -431,6 +455,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_collection_reference_parent() -> anyhow::Result<()> {
         let firestore = build_firestore().await?;
         let collection_ref = firestore.collection("col")?;
@@ -448,6 +473,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_collection_reference_path() -> anyhow::Result<()> {
         let firestore = build_firestore().await?;
         let collection_ref = firestore.collection("col")?;
@@ -463,6 +489,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_document_reference_collection() -> anyhow::Result<()> {
         let firestore = build_firestore().await?;
         // TODO: Use Firesstore::doc(document_path)
@@ -475,74 +502,85 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_document_reference_create() -> anyhow::Result<()> {
         let firestore = build_firestore().await?;
+        let document_data = build_document_data();
+
         // TODO: Use Firesstore::doc(document_path)
         let document_ref = firestore.collection("col")?.doc("doc1")?;
-        #[derive(serde::Serialize)]
-        struct D {
-            s: String,
-            n: i64,
-            b: bool,
-        }
-        document_ref
-            .create(D {
-                s: "abc".to_owned(),
-                n: 123,
-                b: true,
-            })
-            .await?;
 
-        // TODO: test write result
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_document_reference_delete() -> anyhow::Result<()> {
-        let firestore = build_firestore().await?;
-        // TODO: reset document
-        // TODO: Use Firesstore::doc(document_path)
-        let document_ref = firestore.collection("col")?.doc("doc1")?;
+        // reset document
         document_ref.delete().await?;
 
+        document_ref.create(&document_data).await?;
+
         // TODO: test write result
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_document_reference_get() -> anyhow::Result<()> {
-        #[derive(Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-        struct D {
-            s: String,
-            n: i64,
-            b: bool,
-        }
-        let data = D {
-            s: "abc".to_owned(),
-            n: 123,
-            b: true,
-        };
-        let firestore = build_firestore().await?;
-
-        // TODO: Use Firesstore::doc(document_path)
-        let document_ref = firestore.collection("col")?.doc("doc1")?;
-        document_ref.set(&data).await?;
 
         assert_eq!(
-            document_ref.get::<D>().await?.map(|it| it.fields),
-            Some(data)
+            document_ref
+                .get::<DocumentData>()
+                .await?
+                .map(|it| it.fields),
+            Some(document_data)
         );
         Ok(())
     }
 
     #[tokio::test]
+    #[serial_test::serial]
+    async fn test_document_reference_delete() -> anyhow::Result<()> {
+        let firestore = build_firestore().await?;
+        let document_data = build_document_data();
+        let document_ref = firestore.collection("col")?.doc("doc1")?;
+
+        // reset document
+        document_ref.delete().await?;
+        document_ref.create(&document_data).await?;
+
+        // TODO: Use Firestore::doc(document_path)
+        document_ref.delete().await?;
+
+        // TODO: test write result
+        assert_eq!(
+            document_ref
+                .get::<DocumentData>()
+                .await?
+                .map(|it| it.fields),
+            None
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_document_reference_get() -> anyhow::Result<()> {
+        let document_data = build_document_data();
+        let firestore = build_firestore().await?;
+
+        // TODO: Use Firestore::doc(document_path)
+        let document_ref = firestore.collection("col")?.doc("doc1")?;
+        document_ref.set(&document_data).await?;
+
+        assert_eq!(
+            document_ref
+                .get::<DocumentData>()
+                .await?
+                .map(|it| it.fields),
+            Some(document_data)
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
     async fn test_document_reference_id() -> anyhow::Result<()> {
         let firestore = build_firestore().await?;
-        // TODO: Use Firesstore::doc(document_path)
+        // TODO: Use Firestore::doc(document_path)
         let document_ref = firestore.collection("col")?.doc("doc1")?;
         assert_eq!(document_ref.id(), "doc1");
 
-        // TODO: Use Firesstore::doc(document_path)
+        // TODO: Use Firestore::doc(document_path)
         let document_ref = firestore
             .collection("col1")?
             .doc("doc1")?
@@ -553,6 +591,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_document_reference_parent() -> anyhow::Result<()> {
         let firestore = build_firestore().await?;
         // TODO: Use Firesstore::doc(document_path)
@@ -570,13 +609,14 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_document_reference_path() -> anyhow::Result<()> {
         let firestore = build_firestore().await?;
         // TODO: Use Firesstore::doc(document_path)
         let document_ref = firestore.collection("col")?.doc("doc1")?;
         assert_eq!(document_ref.path(), "col/doc1");
 
-        // TODO: Use Firesstore::doc(document_path)
+        // TODO: Use Firestore::doc(document_path)
         let document_ref = firestore
             .collection("col1")?
             .doc("doc1")?
@@ -587,26 +627,33 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial]
     async fn test_document_reference_set() -> anyhow::Result<()> {
         let firestore = build_firestore().await?;
-        // TODO: Use Firesstore::doc(document_path)
+        let document_data = build_document_data();
+        // TODO: Use Firestore::doc(document_path)
         let document_ref = firestore.collection("col")?.doc("doc1")?;
-        #[derive(serde::Serialize)]
-        struct D {
-            s: String,
-            n: i64,
-            b: bool,
-        }
-        document_ref
-            .set(D {
-                s: "abc".to_owned(),
-                n: 123,
-                b: true,
-            })
-            .await?;
+        document_ref.set(&document_data).await?;
 
         // TODO: test write result
+        assert_eq!(
+            document_ref
+                .get::<DocumentData>()
+                .await?
+                .map(|it| it.fields),
+            Some(document_data)
+        );
         Ok(())
+    }
+
+    fn build_document_data() -> DocumentData {
+        let mut rng = rand::rng();
+        let len = rng.random_range(1..=100_usize);
+        DocumentData {
+            s: rand::distr::Alphabetic.sample_string(&mut rng, len),
+            n: rng.random::<i64>(),
+            b: rng.random::<bool>(),
+        }
     }
 
     async fn build_firestore() -> Result<FirestoreClient, Error> {
