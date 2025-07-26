@@ -35,6 +35,8 @@ enum InnerError {
     DocumentReferenceCreateCreateDocument(#[source] tonic::Status),
     #[error("document reference delete delete document")]
     DocumentReferenceDeleteDeleteDocument(#[source] tonic::Status),
+    #[error("document reference set update document")]
+    DocumentReferenceSetUpdateDocument(#[source] tonic::Status),
     #[error("invalid collection id")]
     InvalidCollectionId(#[source] firestore_path::Error),
     #[error("invalid document id")]
@@ -270,6 +272,35 @@ impl DocumentReference {
     pub fn path(&self) -> String {
         self.document_name.document_path().to_string()
     }
+
+    /// TODO: support WriteResult
+    pub async fn set<T>(&self, data: T) -> Result<(), Error>
+    where
+        T: serde::Serialize,
+    {
+        let mut firestore_client = self.firestore_client.client().await?;
+        let value = serde_firestore_value::to_value(&data)
+            .map_err(InnerError::DocumentReferenceCreateSerialize)?;
+        let fields = match value.value_type.unwrap() {
+            google::firestore::v1::value::ValueType::MapValue(map_value) => map_value.fields,
+            _ => unreachable!(),
+        };
+        firestore_client
+            .update_document(google::firestore::v1::UpdateDocumentRequest {
+                document: Some(google::firestore::v1::Document {
+                    name: self.document_name.to_string(),
+                    fields,
+                    create_time: None,
+                    update_time: None,
+                }),
+                update_mask: None,
+                mask: None,
+                current_document: None,
+            })
+            .await
+            .map_err(InnerError::DocumentReferenceSetUpdateDocument)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -466,6 +497,29 @@ mod tests {
             .collection("col2")?
             .doc("doc2")?;
         assert_eq!(document_ref.path(), "col1/doc1/col2/doc2");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_document_reference_set() -> anyhow::Result<()> {
+        let firestore = build_firestore().await?;
+        // TODO: Use Firesstore::doc(document_path)
+        let document_ref = firestore.collection("col")?.doc("doc1")?;
+        #[derive(serde::Serialize)]
+        struct D {
+            s: String,
+            n: i64,
+            b: bool,
+        }
+        document_ref
+            .set(D {
+                s: "abc".to_owned(),
+                n: 123,
+                b: true,
+            })
+            .await?;
+
+        // TODO: test write result
         Ok(())
     }
 
