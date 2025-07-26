@@ -35,6 +35,10 @@ enum InnerError {
     DocumentReferenceCreateCreateDocument(#[source] tonic::Status),
     #[error("document reference delete delete document")]
     DocumentReferenceDeleteDeleteDocument(#[source] tonic::Status),
+    #[error("document reference get deserialize")]
+    DocumentReferenceGetDeserialize(#[source] serde_firestore_value::Error),
+    #[error("document reference get get document")]
+    DocumentReferenceGetGetDocument(#[source] tonic::Status),
     #[error("document reference set update document")]
     DocumentReferenceSetUpdateDocument(#[source] tonic::Status),
     #[error("invalid collection id")]
@@ -195,6 +199,13 @@ impl CollectionReference {
     }
 }
 
+struct Document<T> {
+    create_time: serde_firestore_value::Timestamp,
+    fields: T,
+    name: String,
+    update_time: serde_firestore_value::Timestamp,
+}
+
 struct DocumentReference {
     document_name: DocumentName,
     firestore_client: FirestoreClient,
@@ -256,6 +267,55 @@ impl DocumentReference {
             .await
             .map_err(InnerError::DocumentReferenceDeleteDeleteDocument)?;
         Ok(())
+    }
+
+    /// Option<Document<T>> instead of DocumentSnapshot
+    pub async fn get<T>(&self) -> Result<Option<Document<T>>, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let mut firestore_client = self.firestore_client.client().await?;
+        let document = firestore_client
+            .get_document(google::firestore::v1::GetDocumentRequest {
+                name: self.document_name.to_string(),
+                mask: None,
+                consistency_selector: None,
+            })
+            .await
+            .map(tonic::Response::into_inner)
+            .map(Some)
+            .or_else(|status| match status.code() {
+                tonic::Code::NotFound => Ok(None),
+                _ => Err(status),
+            })
+            .map_err(InnerError::DocumentReferenceGetGetDocument)?;
+        Ok(document
+            .map(
+                |google::firestore::v1::Document {
+                     name,
+                     fields,
+                     create_time,
+                     update_time,
+                 }| {
+                    serde_firestore_value::from_value::<T>(&google::firestore::v1::Value {
+                        value_type: Some(google::firestore::v1::value::ValueType::MapValue(
+                            google::firestore::v1::MapValue { fields },
+                        )),
+                    })
+                    .map(|fields| Document::<T> {
+                        name,
+                        fields,
+                        create_time: serde_firestore_value::Timestamp::from(
+                            create_time.expect("create_time is required"),
+                        ),
+                        update_time: serde_firestore_value::Timestamp::from(
+                            update_time.expect("update_time is required"),
+                        ),
+                    })
+                },
+            )
+            .transpose()
+            .map_err(InnerError::DocumentReferenceGetDeserialize)?)
     }
 
     pub fn id(&self) -> String {
@@ -446,6 +506,32 @@ mod tests {
         document_ref.delete().await?;
 
         // TODO: test write result
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_document_reference_get() -> anyhow::Result<()> {
+        #[derive(Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+        struct D {
+            s: String,
+            n: i64,
+            b: bool,
+        }
+        let data = D {
+            s: "abc".to_owned(),
+            n: 123,
+            b: true,
+        };
+        let firestore = build_firestore().await?;
+
+        // TODO: Use Firesstore::doc(document_path)
+        let document_ref = firestore.collection("col")?.doc("doc1")?;
+        document_ref.set(&data).await?;
+
+        assert_eq!(
+            document_ref.get::<D>().await?.map(|it| it.fields),
+            Some(data)
+        );
         Ok(())
     }
 
