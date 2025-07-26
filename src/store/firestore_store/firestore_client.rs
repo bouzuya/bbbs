@@ -1,7 +1,7 @@
 use firestore_path::{CollectionName, DatabaseName, DocumentName};
 pub use googleapis_tonic_google_firestore_v1::google;
 pub use serde_firestore_value::from_value;
-use std::{str::FromStr as _, sync::Arc};
+use std::{hash::Hash, str::FromStr as _, sync::Arc};
 
 type MyInterceptor =
     Box<dyn FnMut(tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> + Send + Sync>;
@@ -29,6 +29,10 @@ enum InnerError {
     ChannelTlsConfig(#[source] tonic::transport::Error),
     #[error("database name from project id")]
     DatabaseNameFromProjectId(#[source] firestore_path::Error),
+    #[error("document reference create serialize")]
+    DocumentReferenceCreateSerialize(#[source] serde_firestore_value::Error),
+    #[error("document reference create create document")]
+    DocumentReferenceCreateCreateDocument(#[source] tonic::Status),
     #[error("invalid collection id")]
     InvalidCollectionId(#[source] firestore_path::Error),
     #[error("invalid document id")]
@@ -204,6 +208,39 @@ impl DocumentReference {
         })
     }
 
+    /// TODO: support WriteResult
+    pub async fn create<T>(&self, data: T) -> Result<(), Error>
+    where
+        T: serde::Serialize,
+    {
+        let mut firestore_client = self.firestore_client.client().await?;
+        let value = serde_firestore_value::to_value(&data)
+            .map_err(InnerError::DocumentReferenceCreateSerialize)?;
+        let fields = match value.value_type.unwrap() {
+            google::firestore::v1::value::ValueType::MapValue(map_value) => map_value.fields,
+            _ => unreachable!(),
+        };
+        firestore_client
+            .create_document(google::firestore::v1::CreateDocumentRequest {
+                parent: self.document_name.parent().parent().map_or_else(
+                    || self.document_name.root_document_name().to_string(),
+                    |it| it.to_string(),
+                ),
+                collection_id: self.document_name.collection_id().to_string(),
+                document_id: self.document_name.document_id().to_string(),
+                document: Some(google::firestore::v1::Document {
+                    name: "".to_owned(),
+                    fields,
+                    create_time: None,
+                    update_time: None,
+                }),
+                mask: None,
+            })
+            .await
+            .map_err(InnerError::DocumentReferenceCreateCreateDocument)?;
+        Ok(())
+    }
+
     pub fn id(&self) -> String {
         self.document_name.document_id().to_string()
     }
@@ -328,6 +365,29 @@ mod tests {
         assert_eq!(collection_ref.path(), "col/doc1/col2");
 
         // TODO: support collection_path
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_document_reference_create() -> anyhow::Result<()> {
+        let firestore = build_firestore().await?;
+        // TODO: Use Firesstore::doc(document_path)
+        let document_ref = firestore.collection("col")?.doc("doc1")?;
+        #[derive(serde::Serialize)]
+        struct D {
+            s: String,
+            n: i64,
+            b: bool,
+        }
+        document_ref
+            .create(D {
+                s: "abc".to_owned(),
+                n: 123,
+                b: true,
+            })
+            .await?;
+
+        // TODO: test write result
         Ok(())
     }
 
