@@ -33,6 +33,8 @@ enum InnerError {
     DocumentReferenceCreateSerialize(#[source] serde_firestore_value::Error),
     #[error("document reference create create document")]
     DocumentReferenceCreateCreateDocument(#[source] tonic::Status),
+    #[error("document reference delete delete document")]
+    DocumentReferenceDeleteDeleteDocument(#[source] tonic::Status),
     #[error("invalid collection id")]
     InvalidCollectionId(#[source] firestore_path::Error),
     #[error("invalid document id")]
@@ -241,6 +243,19 @@ impl DocumentReference {
         Ok(())
     }
 
+    /// TODO: support pre_condition
+    pub async fn delete(&self) -> Result<(), Error> {
+        let mut firestore_client = self.firestore_client.client().await?;
+        firestore_client
+            .delete_document(google::firestore::v1::DeleteDocumentRequest {
+                name: self.document_name.to_string(),
+                current_document: None,
+            })
+            .await
+            .map_err(InnerError::DocumentReferenceDeleteDeleteDocument)?;
+        Ok(())
+    }
+
     pub fn id(&self) -> String {
         self.document_name.document_id().to_string()
     }
@@ -386,6 +401,18 @@ mod tests {
                 b: true,
             })
             .await?;
+
+        // TODO: test write result
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_document_reference_delete() -> anyhow::Result<()> {
+        let firestore = build_firestore().await?;
+        // TODO: reset document
+        // TODO: Use Firesstore::doc(document_path)
+        let document_ref = firestore.collection("col")?.doc("doc1")?;
+        document_ref.delete().await?;
 
         // TODO: test write result
         Ok(())
