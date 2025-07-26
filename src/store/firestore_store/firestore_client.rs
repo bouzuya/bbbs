@@ -193,6 +193,17 @@ struct DocumentReference {
 }
 
 impl DocumentReference {
+    // TODO: support collection_path
+    pub fn collection(&self, collection_id: &str) -> Result<CollectionReference, Error> {
+        Ok(CollectionReference {
+            collection_name: self
+                .document_name
+                .collection(collection_id)
+                .map_err(InnerError::InvalidCollectionId)?,
+            firestore_client: self.firestore_client.clone(),
+        })
+    }
+
     pub fn id(&self) -> String {
         self.document_name.document_id().to_string()
     }
@@ -225,6 +236,58 @@ mod tests {
                 collection_ref.doc(&document_ref.id())?.path()
             );
         }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_firestore_collection() -> anyhow::Result<()> {
+        let firestore = FirestoreClient::new().await?;
+        let collection_ref = firestore.collection("col")?;
+        assert_eq!(collection_ref.path(), "col");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collection_reference_doc() -> anyhow::Result<()> {
+        let firestore = FirestoreClient::new().await?;
+        let collection_ref = firestore.collection("col")?;
+        let document_ref = collection_ref.doc("doc1")?;
+        assert_eq!(document_ref.id(), "doc1");
+        // TODO: support document_path
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collection_reference_id() -> anyhow::Result<()> {
+        let firestore = FirestoreClient::new().await?;
+        let collection_ref = firestore.collection("col")?;
+        assert_eq!(collection_ref.id(), "col");
+        // TODO: test collection_path
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collection_reference_parent() -> anyhow::Result<()> {
+        let firestore = FirestoreClient::new().await?;
+        let collection_ref = firestore.collection("col")?;
+        assert_eq!(collection_ref.parent().map(|it| it.path()), None);
+
+        let collection_ref = firestore.collection("col")?;
+        let document_ref = collection_ref.doc("doc1")?;
+        let collection_ref = document_ref.collection("col2")?;
+        assert_eq!(
+            collection_ref.parent().map(|it| it.path()),
+            Some("col/doc1".to_owned())
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_collection_reference_path() -> anyhow::Result<()> {
+        let firestore = FirestoreClient::new().await?;
+        let collection_ref = firestore.collection("col")?;
+        assert_eq!(collection_ref.path(), "col");
+        // TODO: support collection_path
         Ok(())
     }
 }
