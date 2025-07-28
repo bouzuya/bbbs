@@ -39,6 +39,8 @@ enum InnerError {
     DocumentReferenceGetDeserialize(#[source] serde_firestore_value::Error),
     #[error("document reference get get document")]
     DocumentReferenceGetGetDocument(#[source] tonic::Status),
+    #[error("document reference list collections list collection ids")]
+    DocumentReferenceListCollectionsListCollectionIds(#[source] tonic::Status),
     #[error("document reference set update document")]
     DocumentReferenceSetUpdateDocument(#[source] tonic::Status),
     #[error("invalid collection id")]
@@ -322,6 +324,36 @@ impl DocumentReference {
         self.document_name.document_id().to_string()
     }
 
+    pub async fn list_collections(&self) -> Result<Vec<CollectionReference>, Error> {
+        let mut firestore_client = self.firestore_client.client().await?;
+        // TODO: support pagination
+        let google::firestore::v1::ListCollectionIdsResponse {
+            collection_ids,
+            next_page_token: _,
+        } = firestore_client
+            .list_collection_ids(google::firestore::v1::ListCollectionIdsRequest {
+                parent: self.document_name.to_string(),
+                page_size: 100,
+                page_token: "".to_owned(),
+                consistency_selector: None,
+            })
+            .await
+            .map_err(InnerError::DocumentReferenceListCollectionsListCollectionIds)?
+            .into_inner();
+        collection_ids
+            .into_iter()
+            .map(|collection_id| -> Result<CollectionReference, Error> {
+                Ok(CollectionReference {
+                    collection_name: self
+                        .document_name
+                        .collection(collection_id)
+                        .map_err(InnerError::InvalidCollectionId)?,
+                    firestore_client: self.firestore_client.clone(),
+                })
+            })
+            .collect::<Result<Vec<CollectionReference>, Error>>()
+    }
+
     pub fn parent(&self) -> CollectionReference {
         CollectionReference {
             collection_name: self.document_name.parent(),
@@ -587,6 +619,33 @@ mod tests {
             .collection("col2")?
             .doc("doc2")?;
         assert_eq!(document_ref.id(), "doc2");
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_document_reference_list_collections() -> anyhow::Result<()> {
+        let firestore = build_firestore().await?;
+        let document_ref = firestore.collection("col")?.doc("doc1")?;
+        document_ref.set(&build_document_data()).await?;
+        document_ref
+            .collection("col2")?
+            .doc("doc2")?
+            .set(&build_document_data())
+            .await?;
+        document_ref
+            .collection("col3")?
+            .doc("doc3")?
+            .set(&build_document_data())
+            .await?;
+        let collections = document_ref.list_collections().await?;
+        assert_eq!(
+            collections
+                .into_iter()
+                .map(|it| it.path())
+                .collect::<Vec<String>>(),
+            vec!["col/doc1/col2".to_owned(), "col/doc1/col3".to_owned()]
+        );
         Ok(())
     }
 
