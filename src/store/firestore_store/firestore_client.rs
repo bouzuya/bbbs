@@ -62,13 +62,13 @@ enum InnerError {
 }
 
 #[derive(Clone)]
-pub struct FirestoreClient {
+pub struct Firestore {
     channel: tonic::transport::Channel,
     database_name: firestore_path::DatabaseName,
     token_source: Arc<dyn token_source::TokenSource>,
 }
 
-impl FirestoreClient {
+impl Firestore {
     pub async fn new() -> Result<Self, Error> {
         let default_token_source_provider = gcloud_auth::token::DefaultTokenSourceProvider::new(
             gcloud_auth::project::Config::default().with_scopes(&[
@@ -131,14 +131,14 @@ impl FirestoreClient {
                 .database_name()
                 .collection(collection_id)
                 .map_err(InnerError::InvalidCollectionId)?,
-            firestore_client: self.clone(),
+            firestore: self.clone(),
         })
     }
 }
 
 struct CollectionReference {
     collection_name: CollectionName,
-    firestore_client: FirestoreClient,
+    firestore: Firestore,
 }
 
 impl CollectionReference {
@@ -149,7 +149,7 @@ impl CollectionReference {
                 .collection_name
                 .doc(document_id)
                 .map_err(InnerError::InvalidDocumentId)?,
-            firestore_client: self.firestore_client.clone(),
+            firestore: self.firestore.clone(),
         })
     }
 
@@ -158,7 +158,7 @@ impl CollectionReference {
     }
 
     pub async fn list_documents(&self) -> Result<Vec<DocumentReference>, Error> {
-        let mut firestore_client = self.firestore_client.client().await?;
+        let mut firestore_client = self.firestore.client().await?;
         let google::firestore::v1::ListDocumentsResponse {
             documents,
             // TODO: pagination
@@ -181,7 +181,7 @@ impl CollectionReference {
                 Ok(DocumentReference {
                     document_name: DocumentName::from_str(&doc.name)
                         .map_err(InnerError::ListDocumentsInvalidDocumentName)?,
-                    firestore_client: self.firestore_client.clone(),
+                    firestore: self.firestore.clone(),
                 })
             })
             .collect::<Result<Vec<DocumentReference>, Error>>()
@@ -192,7 +192,7 @@ impl CollectionReference {
             .parent()
             .map(|parent| DocumentReference {
                 document_name: parent,
-                firestore_client: self.firestore_client.clone(),
+                firestore: self.firestore.clone(),
             })
     }
 
@@ -210,7 +210,7 @@ struct Document<T> {
 
 struct DocumentReference {
     document_name: DocumentName,
-    firestore_client: FirestoreClient,
+    firestore: Firestore,
 }
 
 impl DocumentReference {
@@ -221,7 +221,7 @@ impl DocumentReference {
                 .document_name
                 .collection(collection_id)
                 .map_err(InnerError::InvalidCollectionId)?,
-            firestore_client: self.firestore_client.clone(),
+            firestore: self.firestore.clone(),
         })
     }
 
@@ -230,7 +230,7 @@ impl DocumentReference {
     where
         T: serde::Serialize,
     {
-        let mut firestore_client = self.firestore_client.client().await?;
+        let mut firestore_client = self.firestore.client().await?;
         let value = serde_firestore_value::to_value(&data)
             .map_err(InnerError::DocumentReferenceCreateSerialize)?;
         let fields = match value.value_type.unwrap() {
@@ -260,7 +260,7 @@ impl DocumentReference {
 
     /// TODO: support pre_condition
     pub async fn delete(&self) -> Result<(), Error> {
-        let mut firestore_client = self.firestore_client.client().await?;
+        let mut firestore_client = self.firestore.client().await?;
         firestore_client
             .delete_document(google::firestore::v1::DeleteDocumentRequest {
                 name: self.document_name.to_string(),
@@ -276,7 +276,7 @@ impl DocumentReference {
     where
         T: serde::de::DeserializeOwned,
     {
-        let mut firestore_client = self.firestore_client.client().await?;
+        let mut firestore_client = self.firestore.client().await?;
         let document = firestore_client
             .get_document(google::firestore::v1::GetDocumentRequest {
                 name: self.document_name.to_string(),
@@ -325,7 +325,7 @@ impl DocumentReference {
     }
 
     pub async fn list_collections(&self) -> Result<Vec<CollectionReference>, Error> {
-        let mut firestore_client = self.firestore_client.client().await?;
+        let mut firestore_client = self.firestore.client().await?;
         // TODO: support pagination
         let google::firestore::v1::ListCollectionIdsResponse {
             collection_ids,
@@ -348,7 +348,7 @@ impl DocumentReference {
                         .document_name
                         .collection(collection_id)
                         .map_err(InnerError::InvalidCollectionId)?,
-                    firestore_client: self.firestore_client.clone(),
+                    firestore: self.firestore.clone(),
                 })
             })
             .collect::<Result<Vec<CollectionReference>, Error>>()
@@ -357,7 +357,7 @@ impl DocumentReference {
     pub fn parent(&self) -> CollectionReference {
         CollectionReference {
             collection_name: self.document_name.parent(),
-            firestore_client: self.firestore_client.clone(),
+            firestore: self.firestore.clone(),
         }
     }
 
@@ -370,7 +370,7 @@ impl DocumentReference {
     where
         T: serde::Serialize,
     {
-        let mut firestore_client = self.firestore_client.client().await?;
+        let mut firestore_client = self.firestore.client().await?;
         let value = serde_firestore_value::to_value(&data)
             .map_err(InnerError::DocumentReferenceCreateSerialize)?;
         let fields = match value.value_type.unwrap() {
@@ -715,7 +715,7 @@ mod tests {
         }
     }
 
-    async fn build_firestore() -> Result<FirestoreClient, Error> {
-        FirestoreClient::new().await
+    async fn build_firestore() -> Result<Firestore, Error> {
+        Firestore::new().await
     }
 }
